@@ -1,29 +1,128 @@
 namespace Proiect.Domain.Operations;
 
-public class NotifyCustomerOperation
+using Proiect.Domain.Models.Entities;
+
+/// <summary>
+/// Operation to send notifications to customers based on order state
+/// Single responsibility: Customer notification sending
+/// </summary>
+public class NotifyCustomerOperation : OrderOperation<Task>
 {
-    public static async Task SendOrderConfirmation(string customerEmail, string orderNumber)
+    private readonly INotificationService _notificationService;
+
+    /// <summary>
+    /// Constructor for dependency injection
+    /// </summary>
+    /// <param name="notificationService">Optional notification service (uses console if null)</param>
+    public NotifyCustomerOperation(INotificationService? notificationService = null)
     {
-        await Task.Delay(100);
-        Console.WriteLine($"Order confirmation sent to {customerEmail} for order {orderNumber}");
+        _notificationService = notificationService ?? new ConsoleNotificationService();
     }
 
-    public static async Task SendInvoice(string customerEmail, string invoiceNumber)
+    /// <summary>
+    /// Sends notification for a Pending order (no notification needed at this stage)
+    /// </summary>
+    protected override Task OnPending(PendingOrder order)
     {
-        await Task.Delay(100);
-        Console.WriteLine($"Invoice {invoiceNumber} sent to {customerEmail}");
+        ValidateOrder(order);
+        // No notification for pending orders
+        return Task.CompletedTask;
     }
 
-    public static async Task SendShippingNotification(string customerEmail, string awb)
+    /// <summary>
+    /// Sends order confirmation notification for a Confirmed order
+    /// </summary>
+    protected override Task OnConfirmed(ConfirmedOrder order)
     {
-        await Task.Delay(100);
-        Console.WriteLine($"Shipping notification sent to {customerEmail}. AWB: {awb}");
+        ValidateOrder(order);
+        return SendOrderConfirmationAsync(order.CustomerEmail, order.OrderNumber.Value);
     }
 
-    public static async Task SendDeliveryConfirmation(string customerEmail, string orderNumber)
+    /// <summary>
+    /// Sends payment confirmation notification for a Paid order
+    /// </summary>
+    protected override Task OnPaid(PaidOrder order)
     {
-        await Task.Delay(100);
-        Console.WriteLine($"Delivery confirmation sent to {customerEmail} for order {orderNumber}");
+        ValidateOrder(order);
+        return SendPaymentConfirmationAsync(order.CustomerEmail, order.OrderNumber.Value);
+    }
+
+    /// <summary>
+    /// Sends shipping notification for a Shipped order
+    /// </summary>
+    protected override Task OnShipped(ShippedOrder order)
+    {
+        ValidateOrder(order);
+        return SendShippingNotificationAsync(order.CustomerEmail, order.OrderNumber.Value);
+    }
+
+    /// <summary>
+    /// Sends delivery confirmation notification for a Delivered order
+    /// </summary>
+    protected override Task OnDelivered(DeliveredOrder order)
+    {
+        ValidateOrder(order);
+        return SendDeliveryConfirmationAsync(order.CustomerEmail, order.OrderNumber.Value);
+    }
+
+    /// <summary>
+    /// Private helper method to validate order is not null
+    /// </summary>
+    private static void ValidateOrder(IOrder order)
+    {
+        if (order == null)
+            throw new ArgumentNullException(nameof(order));
+    }
+
+    /// <summary>
+    /// Private helper method to send order confirmation
+    /// </summary>
+    private async Task SendOrderConfirmationAsync(string customerEmail, string orderNumber)
+    {
+        await _notificationService.SendAsync(customerEmail, $"Order confirmation sent for order {orderNumber}");
+    }
+
+    /// <summary>
+    /// Private helper method to send payment confirmation
+    /// </summary>
+    private async Task SendPaymentConfirmationAsync(string customerEmail, string orderNumber)
+    {
+        await _notificationService.SendAsync(customerEmail, $"Payment confirmed for order {orderNumber}");
+    }
+
+    /// <summary>
+    /// Private helper method to send shipping notification
+    /// </summary>
+    private async Task SendShippingNotificationAsync(string customerEmail, string orderNumber)
+    {
+        await _notificationService.SendAsync(customerEmail, $"Order {orderNumber} has been shipped");
+    }
+
+    /// <summary>
+    /// Private helper method to send delivery confirmation
+    /// </summary>
+    private async Task SendDeliveryConfirmationAsync(string customerEmail, string orderNumber)
+    {
+        await _notificationService.SendAsync(customerEmail, $"Order {orderNumber} has been delivered");
     }
 }
 
+/// <summary>
+/// Interface for notification service
+/// </summary>
+public interface INotificationService
+{
+    Task SendAsync(string recipient, string message);
+}
+
+/// <summary>
+/// Console implementation of notification service
+/// </summary>
+internal class ConsoleNotificationService : INotificationService
+{
+    public async Task SendAsync(string recipient, string message)
+    {
+        await Task.Delay(100);
+        Console.WriteLine($"Notification sent to {recipient}: {message}");
+    }
+}
