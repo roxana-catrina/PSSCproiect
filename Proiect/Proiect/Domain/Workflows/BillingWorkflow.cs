@@ -5,47 +5,55 @@ using Proiect.Domain.Models.Entities;
 using Proiect.Domain.Models.Events;
 using Proiect.Domain.Operations;
 
+/// <summary>
+/// Workflow for billing operations
+/// Orchestrates invoice generation and payment processing
+/// </summary>
 public class BillingWorkflow
 {
-    public async Task<(InvoiceGenerated InvoiceEvent, PaymentRecorded PaymentEvent)> ExecuteAsync(
-        GenerateInvoiceCommand command, 
+    /// <summary>
+    /// Executes the billing workflow
+    /// </summary>
+    /// <param name="command">The generate invoice command</param>
+    /// <param name="validateInvoiceOp">Operation to validate invoice</param>
+    /// <param name="notifyInvoiceOp">Operation to notify customer about invoice</param>
+    /// <param name="processPaymentOp">Operation to process payment</param>
+    /// <param name="paymentMethod">Payment method to use</param>
+    /// <returns>Invoice generated and payment recorded events</returns>
+    public async Task<(InvoiceGenerated InvoiceEvent, PaymentRecorded PaymentEvent)> Execute(
+        GenerateInvoiceCommand command,
+        ValidateInvoiceOperation validateInvoiceOp,
+        NotifyInvoiceOperation notifyInvoiceOp,
+        ProcessPaymentOperation processPaymentOp,
         string paymentMethod = "CreditCard")
     {
-        var vatAmount = CalculateVATOperation.Execute(command.TotalAmount);
-        
-        // Create invoice items from command
-        var invoiceItems = new List<InvoiceItem>().AsReadOnly();
-
-        var unpaidInvoice = new UnpaidInvoice(
+        // Create Unvalidated entity at the beginning
+        IInvoice result = new UnvalidatedInvoice(
             command.OrderId,
             command.CustomerName,
             command.CustomerEmail,
-            invoiceItems
+            command.TotalAmount
         );
 
-        await NotifyCustomerOperation.SendInvoice(command.CustomerEmail, unpaidInvoice.InvoiceNumber);
+        // Chain operations: result = op.Transform(result)
+        result = validateInvoiceOp.Transform(result);
 
-        var invoiceEvent = new InvoiceGenerated(
-            unpaidInvoice.Id,
-            unpaidInvoice.OrderId,
-            unpaidInvoice.InvoiceNumber,
-            unpaidInvoice.TotalAmount,
-            unpaidInvoice.VatAmount,
-            unpaidInvoice.GeneratedAt
-        );
+        // Notify customer after invoice generation
+        await notifyInvoiceOp.Transform(result);
 
-        await Task.Delay(100);
-        var paidInvoice = new PaidInvoice(unpaidInvoice);
+        // Process payment
+        result = processPaymentOp.Transform(result);
 
-        var paymentEvent = new PaymentRecorded(
-            Guid.NewGuid().ToString(),
-            paidInvoice.Id,
-            paidInvoice.OrderId,
-            paidInvoice.TotalAmount,
-            paymentMethod,
-            DateTime.UtcNow
-        );
+        // Convert to events using ToEvent()
+        if (result is PaidInvoice paidInvoice)
+        {
+            var invoiceEvent = paidInvoice.ToEvent();
+            var paymentEvent = paidInvoice.ToPaymentEvent(paymentMethod);
+            
+            return (invoiceEvent, paymentEvent);
+        }
 
-        return (invoiceEvent, paymentEvent);
+        // This should never happen if workflow is correct
+        throw new InvalidOperationException("Workflow did not produce a PaidInvoice");
     }
 }

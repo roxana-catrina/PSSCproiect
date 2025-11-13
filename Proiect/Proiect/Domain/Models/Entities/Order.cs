@@ -1,8 +1,16 @@
 namespace Proiect.Domain.Models.Entities;
 
 using Proiect.Domain.Models.ValueObjects;
+using Proiect.Domain.Models.Events;
 
 public interface IOrder { }
+
+public record UnvalidatedOrder(
+    string CustomerName,
+    string CustomerEmail,
+    DeliveryAddress DeliveryAddress,
+    IReadOnlyCollection<OrderLine> OrderLines
+) : IOrder;
 
 public record PendingOrder(
     string Id,
@@ -199,4 +207,46 @@ public record OrderLine(
 )
 {
     public decimal TotalPrice => Quantity * UnitPrice;
+}
+
+/// <summary>
+/// Extension methods for converting order entities to events
+/// </summary>
+public static class OrderExtensions
+{
+    public static OrderPlaced ToEvent(this PendingOrder order)
+    {
+        return new OrderPlaced(
+            order.Id,
+            order.OrderNumber.Value,
+            order.CustomerName,
+            order.CustomerEmail,
+            order.DeliveryAddress,
+            order.OrderLines.Select(ol => new Events.OrderItem(ol.ProductId, ol.Quantity, ol.UnitPrice)).ToList(),
+            order.TotalAmount,
+            order.CreatedAt
+        );
+    }
+
+    public static OrderPlaced ToEvent(this ConfirmedOrder order)
+    {
+        return new OrderPlaced(
+            order.Id,
+            order.OrderNumber.Value,
+            order.CustomerName,
+            order.CustomerEmail,
+            order.DeliveryAddress,
+            order.OrderLines.Select(ol => new Events.OrderItem(ol.ProductId, ol.Quantity, ol.UnitPrice)).ToList(),
+            order.TotalAmount,
+            order.ConfirmedAt
+        );
+    }
+
+    public static OrderConfirmed ToConfirmedEvent(this ConfirmedOrder order)
+    {
+        return new OrderConfirmed(
+            order.Id,
+            order.ConfirmedAt
+        );
+    }
 }

@@ -1,6 +1,18 @@
 namespace Proiect.Domain.Models.Entities;
 
+using Proiect.Domain.Models.Events;
+
 public interface IInvoice { }
+
+public record UnvalidatedInvoice(
+    string OrderId,
+    string CustomerName,
+    string CustomerEmail,
+    decimal TotalAmount
+) : IInvoice
+{
+    public IReadOnlyCollection<InvoiceItem> Items { get; init; } = new List<InvoiceItem>().AsReadOnly();
+}
 
 public record InvoiceItem(
     string ProductId,
@@ -94,5 +106,47 @@ public record InvalidInvoice(
         : this(orderId, customerName, customerEmail, items.Sum(i => i.SubTotal), items.Sum(i => i.VatAmount), reasons.ToList().AsReadOnly())
     {
         Items = items;
+    }
+}
+
+/// <summary>
+/// Extension methods for converting invoice entities to events
+/// </summary>
+public static class InvoiceExtensions
+{
+    public static InvoiceGenerated ToEvent(this UnpaidInvoice invoice)
+    {
+        return new InvoiceGenerated(
+            invoice.Id,
+            invoice.OrderId,
+            invoice.InvoiceNumber,
+            invoice.TotalAmount,
+            invoice.VatAmount,
+            invoice.GeneratedAt
+        );
+    }
+
+    public static InvoiceGenerated ToEvent(this PaidInvoice invoice)
+    {
+        return new InvoiceGenerated(
+            invoice.Id,
+            invoice.OrderId,
+            invoice.InvoiceNumber,
+            invoice.TotalAmount,
+            invoice.VatAmount,
+            invoice.GeneratedAt
+        );
+    }
+
+    public static PaymentRecorded ToPaymentEvent(this PaidInvoice invoice, string paymentMethod)
+    {
+        return new PaymentRecorded(
+            Guid.NewGuid().ToString(),
+            invoice.Id,
+            invoice.OrderId,
+            invoice.TotalAmount,
+            paymentMethod,
+            invoice.PaidAt
+        );
     }
 }

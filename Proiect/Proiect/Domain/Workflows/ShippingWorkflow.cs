@@ -6,48 +6,84 @@ using Proiect.Domain.Models.Events;
 using Proiect.Domain.Models.ValueObjects;
 using Proiect.Domain.Operations;
 
+/// <summary>
+/// Workflow for shipping operations
+/// Orchestrates package preparation, pickup, and delivery
+/// </summary>
 public class ShippingWorkflow
 {
-    public async Task<(PackagePrepared PreparedEvent, PackageDelivered? DeliveredEvent)> ExecuteAsync(
+    /// <summary>
+    /// Executes the shipping workflow
+    /// </summary>
+    /// <param name="command">The pickup package command</param>
+    /// <param name="deliveryAddress">Delivery address for the package</param>
+    /// <param name="items">Package items</param>
+    /// <param name="preparePackageOp">Operation to prepare package</param>
+    /// <param name="notifyPackageOp">Operation to notify customer</param>
+    /// <param name="pickupPackageOp">Operation to mark package as picked up</param>
+    /// <param name="deliverPackageOp">Optional operation to deliver package</param>
+    /// <returns>Package prepared event and optional delivered event</returns>
+    public async Task<PackagePrepared> Execute(
         PickupPackageCommand command,
         DeliveryAddress deliveryAddress,
-        string customerEmail,
-        bool simulateDelivery = false)
+        IReadOnlyCollection<PackageItem> items,
+        PreparePackageOperation preparePackageOp,
+        NotifyPackageOperation notifyPackageOp,
+        PickupPackageOperation pickupPackageOp,
+        DeliverPackageOperation? deliverPackageOp = null)
     {
-        // Create empty package items list (should be populated from order items in real scenario)
-        var packageItems = new List<PackageItem>().AsReadOnly();
-        
-        var preparedPackage = new PreparedPackage(command.OrderId, deliveryAddress, packageItems);
-        var awb = AssignAWBOperation.Execute(preparedPackage);
-
-        await NotifyCustomerOperation.SendShippingNotification(customerEmail, awb.Value);
-
-        var preparedEvent = new PackagePrepared(
-            preparedPackage.Id,
-            preparedPackage.OrderId,
-            preparedPackage.AWB.Value,
-            preparedPackage.PreparedAt
+        // Create Unvalidated entity at the beginning
+        IPackage result = new UnvalidatedPackage(
+            command.OrderId,
+            deliveryAddress,
+            items
         );
 
-        var inTransitPackage = new InTransitPackage(preparedPackage);
+        // Chain operations: result = op.Transform(result)
+        result = preparePackageOp.Transform(result);
 
-        PackageDelivered? deliveredEvent = null;
-        if (simulateDelivery)
+        // Notify customer after package preparation
+        await notifyPackageOp.Transform(result);
+
+        // Mark package as picked up (in transit)
+        result = pickupPackageOp.Transform(result);
+
+        // Optionally deliver the package
+        if (deliverPackageOp != null)
         {
-            await Task.Delay(200);
-            var deliveredPackage = new DeliveredPackage(inTransitPackage, "Customer");
-            
-            await NotifyCustomerOperation.SendDeliveryConfirmation(customerEmail, command.OrderId);
-            
-            deliveredEvent = new PackageDelivered(
+            result = deliverPackageOp.Transform(result);
+            await notifyPackageOp.Transform(result);
+        }
+
+        // Convert to event using ToEvent()
+        if (result is PreparedPackage preparedPackage)
+        {
+            return preparedPackage.ToEvent();
+        }
+        
+        if (result is InTransitPackage inTransitPackage)
+        {
+            // Return the prepared event from the original prepared state
+            // In real scenario, we would track the original prepared package
+            return new PackagePrepared(
+                inTransitPackage.Id,
+                inTransitPackage.OrderId,
+                inTransitPackage.AWB.Value,
+                inTransitPackage.PreparedAt
+            );
+        }
+        
+        if (result is DeliveredPackage deliveredPackage)
+        {
+            return new PackagePrepared(
                 deliveredPackage.Id,
                 deliveredPackage.OrderId,
                 deliveredPackage.AWB.Value,
-                deliveredPackage.DeliveredAt,
-                deliveredPackage.ReceivedBy
+                deliveredPackage.PreparedAt
             );
         }
 
-        return (preparedEvent, deliveredEvent);
+        // This should never happen if workflow is correct
+        throw new InvalidOperationException("Workflow did not produce a valid package state");
     }
 }

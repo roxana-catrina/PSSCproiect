@@ -20,6 +20,14 @@ public class NotifyCustomerOperation : OrderOperation<Task>
     }
 
     /// <summary>
+    /// No notification for unvalidated orders
+    /// </summary>
+    protected override Task OnUnvalidated(UnvalidatedOrder order)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Sends notification for a Pending order (no notification needed at this stage)
     /// </summary>
     protected override Task OnPending(PendingOrder order)
@@ -63,6 +71,22 @@ public class NotifyCustomerOperation : OrderOperation<Task>
     {
         ValidateOrder(order);
         return SendDeliveryConfirmationAsync(order.CustomerEmail, order.OrderNumber.Value);
+    }
+
+    /// <summary>
+    /// No notification for cancelled orders
+    /// </summary>
+    protected override Task OnCancelled(CancelledOrder order)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// No notification for invalid orders
+    /// </summary>
+    protected override Task OnInvalid(InvalidOrder order)
+    {
+        return Task.CompletedTask;
     }
 
     /// <summary>

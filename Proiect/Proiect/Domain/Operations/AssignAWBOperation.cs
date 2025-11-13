@@ -17,6 +17,15 @@ public class AssignAWBOperation : PackageOperation<AWB>
     }
 
     /// <summary>
+    /// Generates AWB for an UnvalidatedPackage (not yet assigned)
+    /// </summary>
+    protected override AWB OnUnvalidated(UnvalidatedPackage package)
+    {
+        ValidatePackage(package);
+        return AWB.Generate();
+    }
+
+    /// <summary>
     /// Retrieves AWB from a PreparedPackage
     /// </summary>
     protected override AWB OnPrepared(PreparedPackage package)
@@ -50,6 +59,14 @@ public class AssignAWBOperation : PackageOperation<AWB>
     {
         ValidatePackage(package);
         return package.AWB;
+    }
+
+    /// <summary>
+    /// No AWB for invalid packages
+    /// </summary>
+    protected override AWB OnInvalid(InvalidPackage package)
+    {
+        throw new InvalidOperationException("Cannot assign AWB to invalid package");
     }
 
     /// <summary>

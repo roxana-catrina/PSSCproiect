@@ -16,13 +16,20 @@ public abstract class PackageOperation
     {
         return package switch
         {
+            UnvalidatedPackage p => OnUnvalidated(p),
             PreparedPackage p => OnPrepared(p),
             InTransitPackage p => OnInTransit(p),
             DeliveredPackage p => OnDelivered(p),
             ReturnedPackage p => OnReturned(p),
+            InvalidPackage p => OnInvalid(p),
             _ => throw new InvalidOperationException($"Unexpected package state: {package.GetType().Name}")
         };
     }
+
+    /// <summary>
+    /// Handles a package in the Unvalidated state. Default is identity (returns same object).
+    /// </summary>
+    protected virtual IPackage OnUnvalidated(UnvalidatedPackage package) => package;
 
     /// <summary>
     /// Handles a package in the Prepared state. Default is identity (returns same object).
@@ -43,6 +50,11 @@ public abstract class PackageOperation
     /// Handles a package in the Returned state. Default is identity (returns same object).
     /// </summary>
     protected virtual IPackage OnReturned(ReturnedPackage package) => package;
+
+    /// <summary>
+    /// Handles a package in the Invalid state. Default is identity (returns same object).
+    /// </summary>
+    protected virtual IPackage OnInvalid(InvalidPackage package) => package;
 }
 
 /// <summary>
@@ -60,13 +72,20 @@ public abstract class PackageOperation<TResult>
     {
         return package switch
         {
+            UnvalidatedPackage p => OnUnvalidated(p),
             PreparedPackage p => OnPrepared(p),
             InTransitPackage p => OnInTransit(p),
             DeliveredPackage p => OnDelivered(p),
             ReturnedPackage p => OnReturned(p),
+            InvalidPackage p => OnInvalid(p),
             _ => throw new InvalidOperationException($"Unexpected package state: {package.GetType().Name}")
         };
     }
+
+    /// <summary>
+    /// Handles a package in the Unvalidated state and returns a result
+    /// </summary>
+    protected abstract TResult OnUnvalidated(UnvalidatedPackage package);
 
     /// <summary>
     /// Handles a package in the Prepared state and returns a result
@@ -87,4 +106,9 @@ public abstract class PackageOperation<TResult>
     /// Handles a package in the Returned state and returns a result
     /// </summary>
     protected abstract TResult OnReturned(ReturnedPackage package);
+
+    /// <summary>
+    /// Handles a package in the Invalid state and returns a result
+    /// </summary>
+    protected abstract TResult OnInvalid(InvalidPackage package);
 }

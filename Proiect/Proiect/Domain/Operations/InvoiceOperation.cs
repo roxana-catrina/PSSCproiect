@@ -16,12 +16,18 @@ public abstract class InvoiceOperation
     {
         return invoice switch
         {
+            UnvalidatedInvoice i => OnUnvalidated(i),
             UnpaidInvoice i => OnUnpaid(i),
             PaidInvoice i => OnPaid(i),
             InvalidInvoice i => OnInvalid(i),
             _ => throw new InvalidOperationException($"Unexpected invoice state: {invoice.GetType().Name}")
         };
     }
+
+    /// <summary>
+    /// Handles an invoice in the Unvalidated state. Default is identity (returns same object).
+    /// </summary>
+    protected virtual IInvoice OnUnvalidated(UnvalidatedInvoice invoice) => invoice;
 
     /// <summary>
     /// Handles an invoice in the Unpaid state. Default is identity (returns same object).
@@ -54,12 +60,18 @@ public abstract class InvoiceOperation<TResult>
     {
         return invoice switch
         {
+            UnvalidatedInvoice i => OnUnvalidated(i),
             UnpaidInvoice i => OnUnpaid(i),
             PaidInvoice i => OnPaid(i),
             InvalidInvoice i => OnInvalid(i),
             _ => throw new InvalidOperationException($"Unexpected invoice state: {invoice.GetType().Name}")
         };
     }
+
+    /// <summary>
+    /// Handles an invoice in the Unvalidated state and returns a result
+    /// </summary>
+    protected abstract TResult OnUnvalidated(UnvalidatedInvoice invoice);
 
     /// <summary>
     /// Handles an invoice in the Unpaid state and returns a result

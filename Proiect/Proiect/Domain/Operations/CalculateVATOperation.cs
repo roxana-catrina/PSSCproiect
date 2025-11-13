@@ -21,6 +21,17 @@ public class CalculateVATOperation : InvoiceOperation<(decimal SubTotal, decimal
     }
 
     /// <summary>
+    /// Calculates VAT breakdown for an UnvalidatedInvoice
+    /// </summary>
+    protected override (decimal SubTotal, decimal VATAmount, decimal Total) OnUnvalidated(UnvalidatedInvoice invoice)
+    {
+        ValidateInvoice(invoice);
+        var vatAmount = CalculateVAT(invoice.TotalAmount, _vatRate);
+        var total = invoice.TotalAmount + vatAmount;
+        return (invoice.TotalAmount, vatAmount, total);
+    }
+
+    /// <summary>
     /// Calculates VAT breakdown for an UnpaidInvoice
     /// </summary>
     protected override (decimal SubTotal, decimal VATAmount, decimal Total) OnUnpaid(UnpaidInvoice invoice)

@@ -16,14 +16,22 @@ public abstract class OrderOperation
     {
         return order switch
         {
+            UnvalidatedOrder o => OnUnvalidated(o),
             PendingOrder o => OnPending(o),
             ConfirmedOrder o => OnConfirmed(o),
             PaidOrder o => OnPaid(o),
             ShippedOrder o => OnShipped(o),
             DeliveredOrder o => OnDelivered(o),
+            CancelledOrder o => OnCancelled(o),
+            InvalidOrder o => OnInvalid(o),
             _ => throw new InvalidOperationException($"Unexpected order state: {order.GetType().Name}")
         };
     }
+
+    /// <summary>
+    /// Handles an order in the Unvalidated state. Default is identity (returns same object).
+    /// </summary>
+    protected virtual IOrder OnUnvalidated(UnvalidatedOrder order) => order;
 
     /// <summary>
     /// Handles an order in the Pending state. Default is identity (returns same object).
@@ -49,6 +57,16 @@ public abstract class OrderOperation
     /// Handles an order in the Delivered state. Default is identity (returns same object).
     /// </summary>
     protected virtual IOrder OnDelivered(DeliveredOrder order) => order;
+
+    /// <summary>
+    /// Handles an order in the Cancelled state. Default is identity (returns same object).
+    /// </summary>
+    protected virtual IOrder OnCancelled(CancelledOrder order) => order;
+
+    /// <summary>
+    /// Handles an order in the Invalid state. Default is identity (returns same object).
+    /// </summary>
+    protected virtual IOrder OnInvalid(InvalidOrder order) => order;
 }
 
 /// <summary>
@@ -66,14 +84,22 @@ public abstract class OrderOperation<TResult>
     {
         return order switch
         {
+            UnvalidatedOrder o => OnUnvalidated(o),
             PendingOrder o => OnPending(o),
             ConfirmedOrder o => OnConfirmed(o),
             PaidOrder o => OnPaid(o),
             ShippedOrder o => OnShipped(o),
             DeliveredOrder o => OnDelivered(o),
+            CancelledOrder o => OnCancelled(o),
+            InvalidOrder o => OnInvalid(o),
             _ => throw new InvalidOperationException($"Unexpected order state: {order.GetType().Name}")
         };
     }
+
+    /// <summary>
+    /// Handles an order in the Unvalidated state and returns a result
+    /// </summary>
+    protected abstract TResult OnUnvalidated(UnvalidatedOrder order);
 
     /// <summary>
     /// Handles an order in the Pending state and returns a result
@@ -99,5 +125,14 @@ public abstract class OrderOperation<TResult>
     /// Handles an order in the Delivered state and returns a result
     /// </summary>
     protected abstract TResult OnDelivered(DeliveredOrder order);
-}
 
+    /// <summary>
+    /// Handles an order in the Cancelled state and returns a result
+    /// </summary>
+    protected abstract TResult OnCancelled(CancelledOrder order);
+
+    /// <summary>
+    /// Handles an order in the Invalid state and returns a result
+    /// </summary>
+    protected abstract TResult OnInvalid(InvalidOrder order);
+}

@@ -1,8 +1,15 @@
 namespace Proiect.Domain.Models.Entities;
 
 using Proiect.Domain.Models.ValueObjects;
+using Proiect.Domain.Models.Events;
 
 public interface IPackage { }
+
+public record UnvalidatedPackage(
+    string OrderId,
+    DeliveryAddress DeliveryAddress,
+    IReadOnlyCollection<PackageItem> Items
+) : IPackage;
 
 public record PackageItem(
     string ProductId,
@@ -129,5 +136,32 @@ public record InvalidPackage(
         : this(orderId, deliveryAddress, reasons.ToList().AsReadOnly())
     {
         Items = items;
+    }
+}
+
+/// <summary>
+/// Extension methods for converting package entities to events
+/// </summary>
+public static class PackageExtensions
+{
+    public static PackagePrepared ToEvent(this PreparedPackage package)
+    {
+        return new PackagePrepared(
+            package.Id,
+            package.OrderId,
+            package.AWB.Value,
+            package.PreparedAt
+        );
+    }
+
+    public static PackageDelivered ToDeliveredEvent(this DeliveredPackage package)
+    {
+        return new PackageDelivered(
+            package.Id,
+            package.OrderId,
+            package.AWB.Value,
+            package.DeliveredAt,
+            package.ReceivedBy
+        );
     }
 }

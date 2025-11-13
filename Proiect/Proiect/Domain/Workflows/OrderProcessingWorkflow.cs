@@ -3,54 +3,60 @@ namespace Proiect.Domain.Workflows;
 using Proiect.Domain.Models.Commands;
 using Proiect.Domain.Models.Entities;
 using Proiect.Domain.Models.Events;
-using Proiect.Domain.Models.ValueObjects;
 using Proiect.Domain.Operations;
-using Proiect.Domain.Exceptions;
 
+/// <summary>
+/// Workflow for order processing operations
+/// Orchestrates order placement, validation, and confirmation
+/// </summary>
 public class OrderProcessingWorkflow
 {
-    private readonly List<ActiveProduct> _products;
-
-    public OrderProcessingWorkflow(List<ActiveProduct> products)
+    /// <summary>
+    /// Executes the order processing workflow
+    /// </summary>
+    /// <param name="command">The place order command</param>
+    /// <param name="validateStockOp">Operation to validate stock</param>
+    /// <param name="validateOrderOp">Operation to validate order</param>
+    /// <param name="confirmOrderOp">Operation to confirm order</param>
+    /// <param name="notifyCustomerOp">Operation to notify customer</param>
+    /// <returns>Order placed event</returns>
+    public async Task<OrderPlaced> Execute(
+        PlaceOrderCommand command,
+        ValidateStockOperation validateStockOp,
+        ValidateOrderOperation validateOrderOp,
+        ConfirmOrderOperation confirmOrderOp,
+        NotifyCustomerOperation notifyCustomerOp)
     {
-        _products = products;
-    }
+        // Create Unvalidated entity at the beginning
+        var orderLines = command.Items.Select(item => new OrderLine(
+            item.ProductId,
+            string.Empty, // Product name will be filled during validation
+            item.Quantity,
+            item.UnitPrice
+        )).ToList().AsReadOnly();
 
-    public async Task<OrderPlaced> ExecuteAsync(PlaceOrderCommand command)
-    {
-        if (command.DeliveryAddress == null)
-            throw new InvalidAddressException("Delivery address is required");
-
-        var requestedQuantities = command.Items.ToDictionary(i => i.ProductId, i => i.Quantity);
-        ValidateStockOperation.Execute(_products, requestedQuantities);
-
-        var orderLines = command.Items.Select(item =>
-        {
-            var product = _products.First(p => p.Id == item.ProductId);
-            var updatedProduct = product.WithStockQuantity(product.StockQuantity - item.Quantity);
-            
-            return new OrderLine(
-                item.ProductId,
-                product.Name,
-                item.Quantity,
-                item.UnitPrice
-            );
-        }).ToList().AsReadOnly();
-
-        var order = new PendingOrder(command.CustomerName, command.CustomerEmail, command.DeliveryAddress, orderLines);
-        var confirmedOrder = new ConfirmedOrder(order);
-
-        await NotifyCustomerOperation.SendOrderConfirmation(confirmedOrder.CustomerEmail, confirmedOrder.OrderNumber.Value);
-
-        return new OrderPlaced(
-            confirmedOrder.Id,
-            confirmedOrder.OrderNumber.Value,
-            confirmedOrder.CustomerName,
-            confirmedOrder.CustomerEmail,
-            confirmedOrder.DeliveryAddress,
-            command.Items.Select(i => new Models.Events.OrderItem(i.ProductId, i.Quantity, i.UnitPrice)).ToList(),
-            confirmedOrder.TotalAmount,
-            confirmedOrder.CreatedAt
+        IOrder result = new UnvalidatedOrder(
+            command.CustomerName,
+            command.CustomerEmail,
+            command.DeliveryAddress,
+            orderLines
         );
+
+        // Chain operations: result = op.Transform(result)
+        result = validateStockOp.Transform(result);
+        result = validateOrderOp.Transform(result);
+        result = confirmOrderOp.Transform(result);
+
+        // Notify customer after confirmation
+        await notifyCustomerOp.Transform(result);
+
+        // Convert to event using ToEvent()
+        if (result is ConfirmedOrder confirmedOrder)
+        {
+            return confirmedOrder.ToEvent();
+        }
+
+        // This should never happen if workflow is correct
+        throw new InvalidOperationException("Workflow did not produce a ConfirmedOrder");
     }
 }

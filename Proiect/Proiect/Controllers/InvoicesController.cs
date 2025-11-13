@@ -1,4 +1,4 @@
-namespace Proiect.Controllers;
+/*amespace Proiect.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using Proiect.DTOs;
@@ -53,3 +53,4 @@ public class InvoicesController : ControllerBase
     }
 }
 
+*/
