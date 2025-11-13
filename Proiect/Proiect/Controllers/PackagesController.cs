@@ -1,4 +1,4 @@
-namespace Proiect.Controllers;
+/*namespace Proiect.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using Proiect.Domain.Models.Commands;
@@ -62,3 +62,4 @@ public class PackagesController : ControllerBase
         }
     }
 }
+*/
