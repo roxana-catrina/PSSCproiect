@@ -2,16 +2,32 @@ namespace Proiect.Domain.Models.Commands;
 
 using Proiect.Domain.Models.ValueObjects;
 
-public record PlaceOrderCommand(
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    List<OrderItem> Items
-);
+public class PlaceOrderCommand
+{
+    public PlaceOrderCommand(string customerName, string customerEmail, DeliveryAddress deliveryAddress, IReadOnlyCollection<OrderItem> items)
+    {
+        CustomerName = customerName;
+        CustomerEmail = customerEmail;
+        DeliveryAddress = deliveryAddress;
+        Items = items;
+    }
 
-public record OrderItem(
-    string ProductId,
-    int Quantity,
-    decimal UnitPrice
-);
+    public string CustomerName { get; }
+    public string CustomerEmail { get; }
+    public DeliveryAddress DeliveryAddress { get; }
+    public IReadOnlyCollection<OrderItem> Items { get; }
+}
 
+public class OrderItem
+{
+    public OrderItem(string productId, int quantity, decimal unitPrice)
+    {
+        ProductId = productId;
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+    }
+
+    public string ProductId { get; }
+    public int Quantity { get; }
+    public decimal UnitPrice { get; }
+}

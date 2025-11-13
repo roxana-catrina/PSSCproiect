@@ -1,8 +1,15 @@
 namespace Proiect.Domain.Models.Commands;
 
-public record PickupPackageCommand(
-    string OrderId,
-    string AWB,
-    DateTime PickupDate
-);
+public class PickupPackageCommand
+{
+    public PickupPackageCommand(string orderId, string awb, DateTime pickupDate)
+    {
+        OrderId = orderId;
+        AWB = awb;
+        PickupDate = pickupDate;
+    }
 
+    public string OrderId { get; }
+    public string AWB { get; }
+    public DateTime PickupDate { get; }
+}
