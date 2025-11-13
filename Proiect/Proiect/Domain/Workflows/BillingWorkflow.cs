@@ -12,34 +12,36 @@ public class BillingWorkflow
         string paymentMethod = "CreditCard")
     {
         var vatAmount = CalculateVATOperation.Execute(command.TotalAmount);
+        
+        // Create invoice items from command
+        var invoiceItems = new List<InvoiceItem>().AsReadOnly();
 
-        var invoice = new Invoice(
+        var unpaidInvoice = new UnpaidInvoice(
             command.OrderId,
             command.CustomerName,
             command.CustomerEmail,
-            command.TotalAmount,
-            vatAmount
+            invoiceItems
         );
 
-        await NotifyCustomerOperation.SendInvoice(command.CustomerEmail, invoice.InvoiceNumber);
+        await NotifyCustomerOperation.SendInvoice(command.CustomerEmail, unpaidInvoice.InvoiceNumber);
 
         var invoiceEvent = new InvoiceGenerated(
-            invoice.Id,
-            invoice.OrderId,
-            invoice.InvoiceNumber,
-            invoice.TotalAmount,
-            invoice.VATAmount,
-            invoice.GeneratedAt
+            unpaidInvoice.Id,
+            unpaidInvoice.OrderId,
+            unpaidInvoice.InvoiceNumber,
+            unpaidInvoice.TotalAmount,
+            unpaidInvoice.VatAmount,
+            unpaidInvoice.GeneratedAt
         );
 
         await Task.Delay(100);
-        invoice.MarkAsPaid();
+        var paidInvoice = new PaidInvoice(unpaidInvoice);
 
         var paymentEvent = new PaymentRecorded(
             Guid.NewGuid().ToString(),
-            invoice.Id,
-            invoice.OrderId,
-            invoice.TotalAmount,
+            paidInvoice.Id,
+            paidInvoice.OrderId,
+            paidInvoice.TotalAmount,
             paymentMethod,
             DateTime.UtcNow
         );
@@ -47,4 +49,3 @@ public class BillingWorkflow
         return (invoiceEvent, paymentEvent);
     }
 }
-

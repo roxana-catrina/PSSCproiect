@@ -2,48 +2,104 @@ namespace Proiect.Domain.Models.Entities;
 
 using Proiect.Domain.Models.ValueObjects;
 
-public class Product
+public interface IProduct { }
+
+public record ProductVariant(
+    string VariantId,
+    string Size,
+    string Color,
+    int StockQuantity
+);
+
+public record ActiveProduct(
+    string Id,
+    string Name,
+    string Description,
+    Price Price,
+    int StockQuantity
+) : IProduct
 {
-    public string Id { get; private set; }
-    public string Name { get; private set; }
-    public string Description { get; private set; }
-    public Price Price { get; private set; }
-    public int StockQuantity { get; private set; }
-    public bool IsAvailable { get; private set; }
-
-    public Product(string name, string description, Price price, int stockQuantity)
+    public IReadOnlyCollection<ProductVariant> Variants { get; init; } = new List<ProductVariant>().AsReadOnly();
+    
+    internal ActiveProduct(string name, string description, Price price, int stockQuantity, IReadOnlyCollection<ProductVariant> variants)
+        : this(
+            Guid.NewGuid().ToString(),
+            name,
+            description,
+            price,
+            stockQuantity
+        )
     {
-        Id = Guid.NewGuid().ToString();
-        Name = name;
-        Description = description;
-        Price = price;
-        StockQuantity = stockQuantity;
-        IsAvailable = true;
+        Variants = variants;
     }
+    
+    internal ActiveProduct WithStockQuantity(int newStockQuantity)
+        => this with { StockQuantity = newStockQuantity };
+}
 
-    public void UpdateStock(int quantity)
+public record InactiveProduct(
+    string Id,
+    string Name,
+    string Description,
+    Price Price,
+    int StockQuantity,
+    DateTime DeactivatedAt,
+    string DeactivationReason
+) : IProduct
+{
+    public IReadOnlyCollection<ProductVariant> Variants { get; init; } = new List<ProductVariant>().AsReadOnly();
+    
+    internal InactiveProduct(ActiveProduct activeProduct, string deactivationReason)
+        : this(
+            activeProduct.Id,
+            activeProduct.Name,
+            activeProduct.Description,
+            activeProduct.Price,
+            activeProduct.StockQuantity,
+            DateTime.UtcNow,
+            deactivationReason
+        )
     {
-        StockQuantity += quantity;
-        if (StockQuantity < 0)
-            throw new InvalidOperationException("Stock quantity cannot be negative");
-    }
-
-    public void ReserveStock(int quantity)
-    {
-        if (quantity > StockQuantity)
-            throw new InvalidOperationException("Insufficient stock");
-        
-        StockQuantity -= quantity;
-    }
-
-    public void Deactivate()
-    {
-        IsAvailable = false;
-    }
-
-    public void Activate()
-    {
-        IsAvailable = true;
+        Variants = activeProduct.Variants;
     }
 }
 
+public record OutOfStockProduct(
+    string Id,
+    string Name,
+    string Description,
+    Price Price,
+    DateTime OutOfStockSince
+) : IProduct
+{
+    public IReadOnlyCollection<ProductVariant> Variants { get; init; } = new List<ProductVariant>().AsReadOnly();
+    
+    internal OutOfStockProduct(ActiveProduct activeProduct)
+        : this(
+            activeProduct.Id,
+            activeProduct.Name,
+            activeProduct.Description,
+            activeProduct.Price,
+            DateTime.UtcNow
+        )
+    {
+        Variants = activeProduct.Variants;
+    }
+}
+
+public record InvalidProduct(
+    string Name,
+    string Description,
+    Price Price,
+    int StockQuantity,
+    IEnumerable<string> Reasons
+) : IProduct
+{
+    public IReadOnlyCollection<ProductVariant> Variants { get; init; } = new List<ProductVariant>().AsReadOnly();
+    
+    internal InvalidProduct(string name, string description, Price price, int stockQuantity, IReadOnlyCollection<ProductVariant> variants, params string[] reasons)
+        : this(name, description, price, stockQuantity, reasons.ToList().AsReadOnly())
+    {
+        Variants = variants;
+    }
+}

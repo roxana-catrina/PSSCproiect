@@ -9,9 +9,9 @@ using Proiect.Domain.Exceptions;
 
 public class OrderProcessingWorkflow
 {
-    private readonly List<Product> _products;
+    private readonly List<ActiveProduct> _products;
 
-    public OrderProcessingWorkflow(List<Product> products)
+    public OrderProcessingWorkflow(List<ActiveProduct> products)
     {
         _products = products;
     }
@@ -27,32 +27,30 @@ public class OrderProcessingWorkflow
         var orderLines = command.Items.Select(item =>
         {
             var product = _products.First(p => p.Id == item.ProductId);
-            product.ReserveStock(item.Quantity);
+            var updatedProduct = product.WithStockQuantity(product.StockQuantity - item.Quantity);
             
-            return new OrderLine
-            {
-                ProductId = item.ProductId,
-                ProductName = product.Name,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice
-            };
-        }).ToList();
+            return new OrderLine(
+                item.ProductId,
+                product.Name,
+                item.Quantity,
+                item.UnitPrice
+            );
+        }).ToList().AsReadOnly();
 
-        var order = new Order(command.CustomerName, command.CustomerEmail, command.DeliveryAddress, orderLines);
-        order.Confirm();
+        var order = new PendingOrder(command.CustomerName, command.CustomerEmail, command.DeliveryAddress, orderLines);
+        var confirmedOrder = new ConfirmedOrder(order);
 
-        await NotifyCustomerOperation.SendOrderConfirmation(order.CustomerEmail, order.OrderNumber.Value);
+        await NotifyCustomerOperation.SendOrderConfirmation(confirmedOrder.CustomerEmail, confirmedOrder.OrderNumber.Value);
 
         return new OrderPlaced(
-            order.Id,
-            order.OrderNumber.Value,
-            order.CustomerName,
-            order.CustomerEmail,
-            order.DeliveryAddress,
+            confirmedOrder.Id,
+            confirmedOrder.OrderNumber.Value,
+            confirmedOrder.CustomerName,
+            confirmedOrder.CustomerEmail,
+            confirmedOrder.DeliveryAddress,
             command.Items.Select(i => new Models.Events.OrderItem(i.ProductId, i.Quantity, i.UnitPrice)).ToList(),
-            order.TotalAmount,
-            order.CreatedAt
+            confirmedOrder.TotalAmount,
+            confirmedOrder.CreatedAt
         );
     }
 }
-

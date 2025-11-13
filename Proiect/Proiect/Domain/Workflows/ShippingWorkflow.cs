@@ -14,38 +14,40 @@ public class ShippingWorkflow
         string customerEmail,
         bool simulateDelivery = false)
     {
-        var package = new Package(command.OrderId, deliveryAddress);
-        var awb = AssignAWBOperation.Execute(package);
+        // Create empty package items list (should be populated from order items in real scenario)
+        var packageItems = new List<PackageItem>().AsReadOnly();
+        
+        var preparedPackage = new PreparedPackage(command.OrderId, deliveryAddress, packageItems);
+        var awb = AssignAWBOperation.Execute(preparedPackage);
 
         await NotifyCustomerOperation.SendShippingNotification(customerEmail, awb.Value);
 
         var preparedEvent = new PackagePrepared(
-            package.Id,
-            package.OrderId,
-            package.AWB.Value,
-            package.PreparedAt
+            preparedPackage.Id,
+            preparedPackage.OrderId,
+            preparedPackage.AWB.Value,
+            preparedPackage.PreparedAt
         );
 
-        package.MarkAsPickedUp();
+        var inTransitPackage = new InTransitPackage(preparedPackage);
 
         PackageDelivered? deliveredEvent = null;
         if (simulateDelivery)
         {
             await Task.Delay(200);
-            package.MarkAsDelivered("Customer");
+            var deliveredPackage = new DeliveredPackage(inTransitPackage, "Customer");
             
             await NotifyCustomerOperation.SendDeliveryConfirmation(customerEmail, command.OrderId);
             
             deliveredEvent = new PackageDelivered(
-                package.Id,
-                package.OrderId,
-                package.AWB.Value,
-                package.DeliveredAt!.Value,
-                package.ReceivedBy!
+                deliveredPackage.Id,
+                deliveredPackage.OrderId,
+                deliveredPackage.AWB.Value,
+                deliveredPackage.DeliveredAt,
+                deliveredPackage.ReceivedBy
             );
         }
 
         return (preparedEvent, deliveredEvent);
     }
 }
-

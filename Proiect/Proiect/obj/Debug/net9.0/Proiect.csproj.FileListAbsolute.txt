@@ -34,3 +34,40 @@ C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\n
 C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.pdb
 C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.genruntimeconfig.cache
 C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\ref\Proiect.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.csproj.AssemblyReference.cache
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.AssemblyInfoInputs.cache
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.AssemblyInfo.cs
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.csproj.CoreCompileInputs.cache
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.sourcelink.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\refint\Proiect.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.pdb
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\appsettings.Development.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\appsettings.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Proiect.staticwebassets.endpoints.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Proiect.exe
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Proiect.deps.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Proiect.runtimeconfig.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Proiect.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Proiect.pdb
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Microsoft.OpenApi.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\scopedcss\bundle\Proiect.styles.css
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets.build.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets.development.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets.build.endpoints.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets\msbuild.Proiect.Microsoft.AspNetCore.StaticWebAssets.props
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets\msbuild.Proiect.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets\msbuild.build.Proiect.props
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets\msbuild.buildMultiTargeting.Proiect.props
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets\msbuild.buildTransitive.Proiect.props
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\staticwebassets.pack.json
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.csproj.Up2Date
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\Proiect.genruntimeconfig.cache
+C:\Users\roxan\Desktop\PSSC\PSSCproiect\Proiect\Proiect\obj\Debug\net9.0\ref\Proiect.dll
