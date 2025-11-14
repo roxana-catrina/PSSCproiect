@@ -1,53 +1,42 @@
+using Proiect.Domain.Models.Commands;
+using Proiect.Domain.Models.Events;
+using Proiect.Domain.Operations;
+using static Proiect.Domain.Models.Entities.Package;
+
 namespace Proiect.Domain.Workflows;
 
-using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Models.Entities;
-using Proiect.Domain.Models.Events;
-using Proiect.Domain.Models.ValueObjects;
-using Proiect.Domain.Operations;
-
+/// <summary>
+/// Workflow for shipping packages
+/// Orchestrates package validation, AWB assignment, and courier notification
+/// </summary>
 public class ShippingWorkflow
 {
-    public async Task<(PackagePrepared PreparedEvent, PackageDelivered? DeliveredEvent)> ExecuteAsync(
+    /// <summary>
+    /// Executes the shipping workflow
+    /// </summary>
+    /// <param name="command">The pickup package command with raw input data</param>
+    /// <param name="generateAwb">Dependency to generate AWB tracking number</param>
+    /// <param name="notifyCourier">Dependency to notify courier service</param>
+    /// <returns>Package delivered event (success or failure)</returns>
+    public PackageDeliveredEvent.IPackageDeliveredEvent Execute(
         PickupPackageCommand command,
-        DeliveryAddress deliveryAddress,
-        string customerEmail,
-        bool simulateDelivery = false)
+        Func<string> generateAwb,
+        Func<string, bool> notifyCourier)
     {
-        // Create empty package items list (should be populated from order items in real scenario)
-        var packageItems = new List<PackageItem>().AsReadOnly();
+        // Step 1: Create unvalidated package from command
+        var unvalidated = new UnvalidatedPackage(
+            command.OrderNumber,
+            command.DeliveryStreet,
+            command.DeliveryCity,
+            command.DeliveryPostalCode,
+            command.DeliveryCountry);
         
-        var preparedPackage = new PreparedPackage(command.OrderId, deliveryAddress, packageItems);
-        var awb = AssignAWBOperation.Execute(preparedPackage);
-
-        await NotifyCustomerOperation.SendShippingNotification(customerEmail, awb.Value);
-
-        var preparedEvent = new PackagePrepared(
-            preparedPackage.Id,
-            preparedPackage.OrderId,
-            preparedPackage.AWB.Value,
-            preparedPackage.PreparedAt
-        );
-
-        var inTransitPackage = new InTransitPackage(preparedPackage);
-
-        PackageDelivered? deliveredEvent = null;
-        if (simulateDelivery)
-        {
-            await Task.Delay(200);
-            var deliveredPackage = new DeliveredPackage(inTransitPackage, "Customer");
-            
-            await NotifyCustomerOperation.SendDeliveryConfirmation(customerEmail, command.OrderId);
-            
-            deliveredEvent = new PackageDelivered(
-                deliveredPackage.Id,
-                deliveredPackage.OrderId,
-                deliveredPackage.AWB.Value,
-                deliveredPackage.DeliveredAt,
-                deliveredPackage.ReceivedBy
-            );
-        }
-
-        return (preparedEvent, deliveredEvent);
+        // Step 2: Chain operations to transform package through states
+        IPackage result = new ValidatePackageDataOperation().Transform(unvalidated);
+        result = new AssignAWBOperation(generateAwb).Transform(result);
+        result = new ShipPackageOperation(notifyCourier).Transform(result);
+        
+        // Step 3: Convert final state to event
+        return result.ToEvent();
     }
 }

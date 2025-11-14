@@ -1,55 +1,64 @@
-namespace Proiect.Controllers;
-
 using Microsoft.AspNetCore.Mvc;
-using Proiect.DTOs;
 using Proiect.Domain.Models.Commands;
 using Proiect.Domain.Workflows;
+using Proiect.Domain.Models.Events;
+
+namespace Proiect.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class InvoicesController : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> GenerateInvoice([FromBody] GenerateInvoiceRequest request)
+    public IActionResult GenerateInvoice([FromBody] GenerateInvoiceRequest request)
     {
         try
         {
             var command = new GenerateInvoiceCommand(
-                request.OrderId,
-                request.TotalAmount,
+                request.OrderNumber,
                 request.CustomerName,
-                request.CustomerEmail
+                request.TotalAmount
             );
 
             var workflow = new BillingWorkflow();
-            var (invoiceEvent, paymentEvent) = await workflow.ExecuteAsync(command, request.PaymentMethod);
+            
+            // Mock dependencies
+            decimal vatRate = 0.19m; // 19% VAT
+            Func<string> generateInvoiceNumber = () => $"INV-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999):D4}";
+            
+            var invoiceEvent = workflow.Execute(command, vatRate, generateInvoiceNumber);
 
-            return Ok(new
+            return invoiceEvent switch
             {
-                success = true,
-                invoice = new
+                InvoiceGeneratedEvent.InvoiceGeneratedSucceededEvent success => Ok(new
                 {
-                    invoiceId = invoiceEvent.InvoiceId,
-                    invoiceNumber = invoiceEvent.InvoiceNumber,
-                    orderId = invoiceEvent.OrderId,
-                    totalAmount = invoiceEvent.TotalAmount,
-                    vatAmount = invoiceEvent.VATAmount,
-                    generatedAt = invoiceEvent.GeneratedAt
-                },
-                payment = new
+                    success = true,
+                    invoice = new
+                    {
+                        invoiceNumber = success.InvoiceNumber,
+                        orderNumber = success.OrderNumber.Value,
+                        customerName = success.CustomerName,
+                        totalAmount = success.TotalAmount.Value,
+                        vatAmount = success.VatAmount.Value,
+                        totalWithVat = success.TotalWithVat.Value,
+                        generatedAt = success.GeneratedAt
+                    },
+                    message = "Invoice generated successfully"
+                }),
+                InvoiceGeneratedEvent.InvoiceGeneratedFailedEvent failure => BadRequest(new
                 {
-                    paymentId = paymentEvent.PaymentId,
-                    amount = paymentEvent.Amount,
-                    paymentMethod = paymentEvent.PaymentMethod,
-                    recordedAt = paymentEvent.RecordedAt
-                },
-                message = "Invoice generated and payment processed successfully"
-            });
+                    success = false,
+                    errors = failure.Reasons,
+                    message = "Failed to generate invoice"
+                }),
+                _ => StatusCode(500, new { success = false, message = "Unexpected error" })
+            };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "An error occurred while generating the invoice", error = ex.Message });
+            return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
         }
     }
 }
 
+public record GenerateInvoiceRequest(string OrderNumber, string CustomerName, string TotalAmount);

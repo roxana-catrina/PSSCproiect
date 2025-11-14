@@ -1,3 +1,5 @@
+using Proiect.Domain.Exceptions;
+
 namespace Proiect.Domain.Models.ValueObjects;
 
 /// <summary>
@@ -36,12 +38,12 @@ public record DeliveryAddress
     private DeliveryAddress(string street, string city, string postalCode, string country)
     {
         if (!IsValid(street, city, postalCode, country))
-            throw new InvalidDeliveryAddressException("All address fields must be non-empty");
+            throw new InvalidDeliveryAddressException("All address components must be non-empty and valid.");
 
-        Street = street;
-        City = city;
-        PostalCode = postalCode;
-        Country = country;
+        Street = street.Trim();
+        City = city.Trim();
+        PostalCode = postalCode.Trim();
+        Country = country.Trim();
     }
 
     /// <summary>
@@ -57,7 +59,11 @@ public record DeliveryAddress
         return !string.IsNullOrWhiteSpace(street) &&
                !string.IsNullOrWhiteSpace(city) &&
                !string.IsNullOrWhiteSpace(postalCode) &&
-               !string.IsNullOrWhiteSpace(country);
+               !string.IsNullOrWhiteSpace(country) &&
+               street.Length >= 5 &&
+               city.Length >= 2 &&
+               postalCode.Length >= 4 &&
+               country.Length >= 2;
     }
 
     /// <summary>
@@ -76,8 +82,15 @@ public record DeliveryAddress
         if (!IsValid(street, city, postalCode, country))
             return false;
         
-        address = new DeliveryAddress(street, city, postalCode, country);
-        return true;
+        try
+        {
+            address = new DeliveryAddress(street, city, postalCode, country);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

@@ -1,51 +1,40 @@
-namespace Proiect.Domain.Workflows;
-
 using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Models.Entities;
 using Proiect.Domain.Models.Events;
 using Proiect.Domain.Operations;
+using static Proiect.Domain.Models.Entities.Invoice;
 
+namespace Proiect.Domain.Workflows;
+
+/// <summary>
+/// Workflow for generating invoices
+/// Orchestrates invoice validation, VAT calculation, and invoice generation
+/// </summary>
 public class BillingWorkflow
 {
-    public async Task<(InvoiceGenerated InvoiceEvent, PaymentRecorded PaymentEvent)> ExecuteAsync(
-        GenerateInvoiceCommand command, 
-        string paymentMethod = "CreditCard")
+    /// <summary>
+    /// Executes the billing workflow
+    /// </summary>
+    /// <param name="command">The generate invoice command with raw input data</param>
+    /// <param name="vatRate">The VAT rate to apply (e.g., 0.19 for 19%)</param>
+    /// <param name="generateInvoiceNumber">Dependency to generate unique invoice number</param>
+    /// <returns>Invoice generated event (success or failure)</returns>
+    public InvoiceGeneratedEvent.IInvoiceGeneratedEvent Execute(
+        GenerateInvoiceCommand command,
+        decimal vatRate,
+        Func<string> generateInvoiceNumber)
     {
-        var vatAmount = CalculateVATOperation.Execute(command.TotalAmount);
-        
-        // Create invoice items from command
-        var invoiceItems = new List<InvoiceItem>().AsReadOnly();
-
-        var unpaidInvoice = new UnpaidInvoice(
-            command.OrderId,
+        // Step 1: Create unvalidated invoice from command
+        var unvalidated = new UnvalidatedInvoice(
+            command.OrderNumber,
             command.CustomerName,
-            command.CustomerEmail,
-            invoiceItems
-        );
-
-        await NotifyCustomerOperation.SendInvoice(command.CustomerEmail, unpaidInvoice.InvoiceNumber);
-
-        var invoiceEvent = new InvoiceGenerated(
-            unpaidInvoice.Id,
-            unpaidInvoice.OrderId,
-            unpaidInvoice.InvoiceNumber,
-            unpaidInvoice.TotalAmount,
-            unpaidInvoice.VatAmount,
-            unpaidInvoice.GeneratedAt
-        );
-
-        await Task.Delay(100);
-        var paidInvoice = new PaidInvoice(unpaidInvoice);
-
-        var paymentEvent = new PaymentRecorded(
-            Guid.NewGuid().ToString(),
-            paidInvoice.Id,
-            paidInvoice.OrderId,
-            paidInvoice.TotalAmount,
-            paymentMethod,
-            DateTime.UtcNow
-        );
-
-        return (invoiceEvent, paymentEvent);
+            command.TotalAmount);
+        
+        // Step 2: Chain operations to transform invoice through states
+        IInvoice result = unvalidated;
+        result = new ValidateInvoiceDataOperation().Transform(result);
+        result = new CalculateVATOperation(vatRate, generateInvoiceNumber).Transform(result);
+        
+        // Step 3: Convert final state to event
+        return result.ToEvent();
     }
 }

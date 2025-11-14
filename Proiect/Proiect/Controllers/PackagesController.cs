@@ -1,65 +1,68 @@
-/*namespace Proiect.Controllers;
-
 using Microsoft.AspNetCore.Mvc;
 using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Models.ValueObjects;
 using Proiect.Domain.Workflows;
-using Proiect.DTOs;
+using Proiect.Domain.Models.Events;
+
+namespace Proiect.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class PackagesController : ControllerBase
 {
     [HttpPost("pickup")]
-    public async Task<IActionResult> PickupPackage([FromBody] PickupPackageRequest request)
+    public IActionResult PickupPackage([FromBody] PickupPackageRequest request)
     {
         try
         {
             var command = new PickupPackageCommand(
-                request.OrderId,
-                request.Awb ?? string.Empty,
-                request.PickupDate
-            );
-
-            var deliveryAddress = new DeliveryAddress(
-                request.DeliveryAddress.Street,
-                request.DeliveryAddress.City,
-                request.DeliveryAddress.PostalCode,
-                request.DeliveryAddress.Country
+                request.OrderNumber,
+                request.DeliveryStreet,
+                request.DeliveryCity,
+                request.DeliveryPostalCode,
+                request.DeliveryCountry
             );
 
             var workflow = new ShippingWorkflow();
-            var (preparedEvent, deliveredEvent) = await workflow.ExecuteAsync(
-                command,
-                deliveryAddress,
-                request.CustomerEmail,
-                request.SimulateDelivery
-            );
+            
+            // Mock dependencies
+            Func<string> generateAwb = () => $"RO{DateTime.Now:yyyyMMddHHmm}{new Random().Next(10, 99):D2}";
+            Func<string, bool> notifyCourier = (awb) => true; // Always successful
+            
+            var packageEvent = workflow.Execute(command, generateAwb, notifyCourier);
 
-            var response = new
+            return packageEvent switch
             {
-                success = true,
-                package = new
+                PackageDeliveredEvent.PackageDeliveredSucceededEvent success => Ok(new
                 {
-                    packageId = preparedEvent.PackageId,
-                    orderId = preparedEvent.OrderId,
-                    awb = preparedEvent.AWB,
-                    preparedAt = preparedEvent.PreparedAt
-                },
-                delivery = deliveredEvent != null ? new
+                    success = true,
+                    package = new
+                    {
+                        orderNumber = success.OrderNumber.Value,
+                        trackingNumber = success.TrackingNumber.Value,
+                        recipientName = success.RecipientName,
+                        deliveredAt = success.DeliveredAt
+                    },
+                    message = "Package shipped successfully"
+                }),
+                PackageDeliveredEvent.PackageDeliveredFailedEvent failure => BadRequest(new
                 {
-                    deliveredAt = deliveredEvent.DeliveredAt,
-                    receivedBy = deliveredEvent.ReceivedBy
-                } : null,
-                message = deliveredEvent != null ? "Package prepared and delivered" : "Package prepared for shipping"
+                    success = false,
+                    errors = failure.Reasons,
+                    message = "Failed to ship package"
+                }),
+                _ => StatusCode(500, new { success = false, message = "Unexpected error" })
             };
-
-            return Ok(response);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "An error occurred while processing the package", error = ex.Message });
+            return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
         }
     }
 }
-*/
+
+public record PickupPackageRequest(
+    string OrderNumber,
+    string DeliveryStreet,
+    string DeliveryCity,
+    string DeliveryPostalCode,
+    string DeliveryCountry);

@@ -1,68 +1,58 @@
+using System.Text.RegularExpressions;
+using Proiect.Domain.Exceptions;
+
 namespace Proiect.Domain.Models.ValueObjects;
 
 /// <summary>
-/// Represents an order number for order identification
+/// Value object representing a unique order number
+/// Format: ORD-YYYYMMDD-XXXX (e.g., ORD-20251114-0001)
 /// </summary>
 public record OrderNumber
 {
-    /// <summary>
-    /// Gets the order number value
-    /// </summary>
+    private static readonly Regex ValidPattern = new(@"^ORD-\d{8}-\d{4}$", RegexOptions.Compiled);
     public string Value { get; }
-
-    /// <summary>
-    /// Private constructor for OrderNumber
-    /// </summary>
-    /// <param name="value">The order number string value</param>
-    /// <exception cref="InvalidOrderNumberException">Thrown when the order number value is invalid</exception>
+    
     private OrderNumber(string value)
     {
-        if (!IsValid(value))
-            throw new InvalidOrderNumberException("Order number cannot be empty or whitespace");
-        
-        Value = value;
+        if (IsValid(value))
+            Value = value;
+        else
+            throw new InvalidOrderNumberException($"Invalid order number format: {value}. Expected format: ORD-YYYYMMDD-XXXX");
     }
-
-    /// <summary>
-    /// Validates the order number value
-    /// </summary>
-    /// <param name="value">The value to validate</param>
-    /// <returns>True if valid, false otherwise</returns>
+    
     private static bool IsValid(string value)
     {
-        return !string.IsNullOrWhiteSpace(value);
-    }
-
-    /// <summary>
-    /// Tries to parse a string into an OrderNumber
-    /// </summary>
-    /// <param name="value">The string value to parse</param>
-    /// <param name="orderNumber">The resulting OrderNumber if successful, null otherwise</param>
-    /// <returns>True if parsing succeeded, false otherwise</returns>
-    public static bool TryParse(string value, out OrderNumber? orderNumber)
-    {
-        orderNumber = null;
-        
-        if (!IsValid(value))
+        if (string.IsNullOrWhiteSpace(value))
             return false;
-        
-        orderNumber = new OrderNumber(value);
-        return true;
+            
+        if (!ValidPattern.IsMatch(value))
+            return false;
+            
+        // Extract date part and validate
+        var datePart = value.Substring(4, 8);
+        return DateTime.TryParseExact(datePart, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out _);
     }
-
-    /// <summary>
-    /// Generates a new OrderNumber with a unique identifier
-    /// </summary>
-    /// <returns>A new OrderNumber instance</returns>
-    public static OrderNumber Generate()
+    
+    public static bool TryParse(string input, out OrderNumber? result)
     {
-        return new OrderNumber($"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}");
+        result = null;
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+            
+        if (!IsValid(input))
+            return false;
+            
+        try
+        {
+            result = new OrderNumber(input);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
-
-    /// <summary>
-    /// Returns the string representation of the order number
-    /// </summary>
-    /// <returns>The order number value as string</returns>
+    
     public override string ToString() => Value;
 }
 

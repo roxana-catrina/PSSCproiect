@@ -1,98 +1,69 @@
+using Proiect.Domain.Models.ValueObjects;
+
 namespace Proiect.Domain.Models.Entities;
 
-public interface IInvoice { }
-
-public record InvoiceItem(
-    string ProductId,
-    string ProductName,
-    int Quantity,
-    decimal UnitPrice,
-    decimal VatRate
-)
+public static class Invoice
 {
-    public decimal SubTotal => Quantity * UnitPrice;
-    public decimal VatAmount => SubTotal * VatRate;
-    public decimal Total => SubTotal + VatAmount;
-}
-
-public record UnpaidInvoice(
-    string Id,
-    string InvoiceNumber,
-    string OrderId,
-    string CustomerName,
-    string CustomerEmail,
-    decimal SubTotal,
-    decimal VatAmount,
-    decimal TotalAmount,
-    DateTime GeneratedAt
-) : IInvoice
-{
-    public IReadOnlyCollection<InvoiceItem> Items { get; init; } = new List<InvoiceItem>().AsReadOnly();
+    public interface IInvoice { }
     
-    internal UnpaidInvoice(string orderId, string customerName, string customerEmail, IReadOnlyCollection<InvoiceItem> items)
-        : this(
-            Guid.NewGuid().ToString(),
-            $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}",
-            orderId,
-            customerName,
-            customerEmail,
-            items.Sum(i => i.SubTotal),
-            items.Sum(i => i.VatAmount),
-            items.Sum(i => i.Total),
-            DateTime.UtcNow
-        )
+    public record UnvalidatedInvoice(
+        string OrderNumber,
+        string CustomerName,
+        string TotalAmount) : IInvoice;
+    
+    public record ValidatedInvoice : IInvoice
     {
-        Items = items;
+        internal ValidatedInvoice(
+            OrderNumber orderNumber,
+            string customerName,
+            Price totalAmount)
+        {
+            OrderNumber = orderNumber;
+            CustomerName = customerName;
+            TotalAmount = totalAmount;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public string CustomerName { get; }
+        public Price TotalAmount { get; }
     }
-}
-
-public record PaidInvoice(
-    string Id,
-    string InvoiceNumber,
-    string OrderId,
-    string CustomerName,
-    string CustomerEmail,
-    decimal SubTotal,
-    decimal VatAmount,
-    decimal TotalAmount,
-    DateTime GeneratedAt,
-    DateTime PaidAt
-) : IInvoice
-{
-    public IReadOnlyCollection<InvoiceItem> Items { get; init; } = new List<InvoiceItem>().AsReadOnly();
     
-    internal PaidInvoice(UnpaidInvoice unpaidInvoice)
-        : this(
-            unpaidInvoice.Id,
-            unpaidInvoice.InvoiceNumber,
-            unpaidInvoice.OrderId,
-            unpaidInvoice.CustomerName,
-            unpaidInvoice.CustomerEmail,
-            unpaidInvoice.SubTotal,
-            unpaidInvoice.VatAmount,
-            unpaidInvoice.TotalAmount,
-            unpaidInvoice.GeneratedAt,
-            DateTime.UtcNow
-        )
+    public record GeneratedInvoice : IInvoice
     {
-        Items = unpaidInvoice.Items;
+        internal GeneratedInvoice(
+            string invoiceNumber,
+            OrderNumber orderNumber,
+            string customerName,
+            Price totalAmount,
+            Price vatAmount,
+            Price totalWithVat,
+            DateTime generatedAt)
+        {
+            InvoiceNumber = invoiceNumber;
+            OrderNumber = orderNumber;
+            CustomerName = customerName;
+            TotalAmount = totalAmount;
+            VatAmount = vatAmount;
+            TotalWithVat = totalWithVat;
+            GeneratedAt = generatedAt;
+        }
+        
+        public string InvoiceNumber { get; }
+        public OrderNumber OrderNumber { get; }
+        public string CustomerName { get; }
+        public Price TotalAmount { get; }
+        public Price VatAmount { get; }
+        public Price TotalWithVat { get; }
+        public DateTime GeneratedAt { get; }
     }
-}
-
-public record InvalidInvoice(
-    string OrderId,
-    string CustomerName,
-    string CustomerEmail,
-    decimal SubTotal,
-    decimal VatAmount,
-    IEnumerable<string> Reasons
-) : IInvoice
-{
-    public IReadOnlyCollection<InvoiceItem> Items { get; init; } = new List<InvoiceItem>().AsReadOnly();
     
-    internal InvalidInvoice(string orderId, string customerName, string customerEmail, IReadOnlyCollection<InvoiceItem> items, params string[] reasons)
-        : this(orderId, customerName, customerEmail, items.Sum(i => i.SubTotal), items.Sum(i => i.VatAmount), reasons.ToList().AsReadOnly())
+    public record InvalidInvoice : IInvoice
     {
-        Items = items;
+        internal InvalidInvoice(IEnumerable<string> reasons)
+        {
+            Reasons = reasons;
+        }
+        
+        public IEnumerable<string> Reasons { get; }
     }
 }

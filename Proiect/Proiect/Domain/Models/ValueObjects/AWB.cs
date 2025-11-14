@@ -1,68 +1,53 @@
+using System.Text.RegularExpressions;
+using Proiect.Domain.Exceptions;
+
 namespace Proiect.Domain.Models.ValueObjects;
 
 /// <summary>
-/// Represents an Air Waybill number for package tracking
+/// Value object representing AWB (Air Waybill) tracking number
+/// Format: 2 letters followed by 10 digits (e.g., RO1234567890)
 /// </summary>
 public record AWB
 {
-    /// <summary>
-    /// Gets the AWB value
-    /// </summary>
+    private static readonly Regex ValidPattern = new(@"^[A-Z]{2}\d{10}$", RegexOptions.Compiled);
     public string Value { get; }
-
-    /// <summary>
-    /// Private constructor for AWB
-    /// </summary>
-    /// <param name="value">The AWB string value</param>
-    /// <exception cref="InvalidAWBException">Thrown when the AWB value is invalid</exception>
+    
     private AWB(string value)
     {
-        if (!IsValid(value))
-            throw new InvalidAWBException("AWB cannot be empty or whitespace");
-        
-        Value = value;
+        if (IsValid(value))
+            Value = value.ToUpperInvariant();
+        else
+            throw new InvalidAWBException($"Invalid AWB format: {value}. Expected format: 2 letters followed by 10 digits (e.g., RO1234567890)");
     }
-
-    /// <summary>
-    /// Validates the AWB value
-    /// </summary>
-    /// <param name="value">The value to validate</param>
-    /// <returns>True if valid, false otherwise</returns>
+    
     private static bool IsValid(string value)
     {
-        return !string.IsNullOrWhiteSpace(value);
-    }
-
-    /// <summary>
-    /// Tries to parse a string into an AWB
-    /// </summary>
-    /// <param name="value">The string value to parse</param>
-    /// <param name="awb">The resulting AWB if successful, null otherwise</param>
-    /// <returns>True if parsing succeeded, false otherwise</returns>
-    public static bool TryParse(string value, out AWB? awb)
-    {
-        awb = null;
-        
-        if (!IsValid(value))
+        if (string.IsNullOrWhiteSpace(value))
             return false;
-        
-        awb = new AWB(value);
-        return true;
+            
+        return ValidPattern.IsMatch(value.ToUpperInvariant());
     }
-
-    /// <summary>
-    /// Generates a new AWB with a unique identifier
-    /// </summary>
-    /// <returns>A new AWB instance</returns>
-    public static AWB Generate()
+    
+    public static bool TryParse(string input, out AWB? result)
     {
-        return new AWB($"AWB{DateTime.UtcNow:yyyyMMdd}{Random.Shared.Next(100000, 999999)}");
+        result = null;
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+            
+        if (!IsValid(input))
+            return false;
+            
+        try
+        {
+            result = new AWB(input);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
-
-    /// <summary>
-    /// Returns the string representation of the AWB
-    /// </summary>
-    /// <returns>The AWB value as string</returns>
+    
     public override string ToString() => Value;
 }
 

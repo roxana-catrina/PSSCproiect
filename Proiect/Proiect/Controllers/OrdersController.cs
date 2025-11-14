@@ -1,88 +1,79 @@
-/*namespace Proiect.Controllers;
-
 using Microsoft.AspNetCore.Mvc;
 using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Models.ValueObjects;
-using Proiect.Domain.Models.Entities;
 using Proiect.Domain.Workflows;
-using Proiect.Domain.Exceptions;
-using Proiect.DTOs;
+using Proiect.Domain.Models.Events;
+
+namespace Proiect.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
 {
-    private static readonly List<Product> Products = new()
-    {
-        new Product("Laptop", "High-performance laptop", new Price(2500), 10),
-        new Product("Mouse", "Wireless mouse", new Price(100), 50),
-        new Product("Keyboard", "Mechanical keyboard", new Price(300), 30)
-    };
-
     [HttpPost]
-    public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request)
+    public IActionResult PlaceOrder([FromBody] PlaceOrderRequest request)
     {
         try
         {
-            var deliveryAddress = new DeliveryAddress(
-                request.DeliveryAddress.Street,
-                request.DeliveryAddress.City,
-                request.DeliveryAddress.PostalCode,
-                request.DeliveryAddress.Country
-            );
-
             var items = request.Items.Select(i => 
-                new Domain.Models.Commands.OrderItem(i.ProductId, i.Quantity, i.UnitPrice)
+                new OrderItemCommand(i.ProductName, i.Quantity, i.UnitPrice)
             ).ToList();
 
             var command = new PlaceOrderCommand(
                 request.CustomerName,
                 request.CustomerEmail,
-                deliveryAddress,
+                request.DeliveryStreet,
+                request.DeliveryCity,
+                request.DeliveryPostalCode,
+                request.DeliveryCountry,
                 items
             );
 
-            var workflow = new OrderProcessingWorkflow(Products);
-            var orderPlacedEvent = await workflow.ExecuteAsync(command);
+            var workflow = new OrderProcessingWorkflow();
+            
+            // Mock dependencies
+            Func<string, int, bool> checkStockAvailability = (productName, quantity) => true; // Always available
+            Func<string> generateOrderNumber = () => $"ORD-{DateTime.Now:yyyyMMdd}-{new Random().Next(1, 9999):D4}";
+            
+            var orderEvent = workflow.Execute(command, checkStockAvailability, generateOrderNumber);
 
-            return Ok(new
+            return orderEvent switch
             {
-                success = true,
-                orderId = orderPlacedEvent.OrderId,
-                orderNumber = orderPlacedEvent.OrderNumber,
-                totalAmount = orderPlacedEvent.TotalAmount,
-                message = "Order placed successfully"
-            });
-        }
-        catch (InsufficientStockException ex)
-        {
-            return BadRequest(new { success = false, message = ex.Message });
-        }
-        catch (InvalidAddressException ex)
-        {
-            return BadRequest(new { success = false, message = ex.Message });
+                OrderPlacedEvent.OrderPlacedSucceededEvent success => Ok(new
+                {
+                    success = true,
+                    order = new
+                    {
+                        orderNumber = success.OrderNumber.Value,
+                        customerName = success.CustomerName,
+                        customerEmail = success.CustomerEmail,
+                        totalAmount = success.TotalAmount.Value,
+                        placedAt = success.PlacedAt
+                    },
+                    message = "Order placed successfully"
+                }),
+                OrderPlacedEvent.OrderPlacedFailedEvent failure => BadRequest(new
+                {
+                    success = false,
+                    errors = failure.Reasons,
+                    message = "Failed to place order"
+                }),
+                _ => StatusCode(500, new { success = false, message = "Unexpected error" })
+            };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "An error occurred while processing your order", error = ex.Message });
+            return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
         }
     }
-
-    [HttpGet("products")]
-    public IActionResult GetProducts()
-    {
-        var products = Products.Select(p => new
-        {
-            id = p.Id,
-            name = p.Name,
-            description = p.Description,
-            price = p.Price.Amount,
-            currency = p.Price.Currency,
-            stockQuantity = p.StockQuantity,
-            isAvailable = p.IsAvailable
-        });
-
-        return Ok(products);
-    }
 }
-*/
+
+public record PlaceOrderRequest(
+    string CustomerName,
+    string CustomerEmail,
+    string DeliveryStreet,
+    string DeliveryCity,
+    string DeliveryPostalCode,
+    string DeliveryCountry,
+    List<OrderItemRequest> Items);
+
+public record OrderItemRequest(string ProductName, string Quantity, string UnitPrice);

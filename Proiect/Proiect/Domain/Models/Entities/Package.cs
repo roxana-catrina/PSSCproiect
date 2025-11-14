@@ -1,133 +1,99 @@
-namespace Proiect.Domain.Models.Entities;
-
 using Proiect.Domain.Models.ValueObjects;
 
-public interface IPackage { }
+namespace Proiect.Domain.Models.Entities;
 
-public record PackageItem(
-    string ProductId,
-    string ProductName,
-    int Quantity,
-    decimal Weight
-);
-
-public record PreparedPackage(
-    string Id,
-    string OrderId,
-    AWB AWB,
-    DeliveryAddress DeliveryAddress,
-    DateTime PreparedAt
-) : IPackage
+public static class Package
 {
-    public IReadOnlyCollection<PackageItem> Items { get; init; } = new List<PackageItem>().AsReadOnly();
+    public interface IPackage { }
     
-    internal PreparedPackage(string orderId, DeliveryAddress deliveryAddress, IReadOnlyCollection<PackageItem> items)
-        : this(
-            Guid.NewGuid().ToString(),
-            orderId,
-            AWB.Generate(),
-            deliveryAddress,
-            DateTime.UtcNow
-        )
+    public record UnvalidatedPackage(
+        string OrderNumber,
+        string DeliveryStreet,
+        string DeliveryCity,
+        string DeliveryPostalCode,
+        string DeliveryCountry) : IPackage;
+    
+    public record ValidatedPackage : IPackage
     {
-        Items = items;
+        internal ValidatedPackage(
+            OrderNumber orderNumber,
+            DeliveryAddress deliveryAddress)
+        {
+            OrderNumber = orderNumber;
+            DeliveryAddress = deliveryAddress;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public DeliveryAddress DeliveryAddress { get; }
     }
-}
-
-public record InTransitPackage(
-    string Id,
-    string OrderId,
-    AWB AWB,
-    DeliveryAddress DeliveryAddress,
-    DateTime PreparedAt,
-    DateTime PickedUpAt
-) : IPackage
-{
-    public IReadOnlyCollection<PackageItem> Items { get; init; } = new List<PackageItem>().AsReadOnly();
     
-    internal InTransitPackage(PreparedPackage preparedPackage)
-        : this(
-            preparedPackage.Id,
-            preparedPackage.OrderId,
-            preparedPackage.AWB,
-            preparedPackage.DeliveryAddress,
-            preparedPackage.PreparedAt,
-            DateTime.UtcNow
-        )
+    public record PreparedPackage : IPackage
     {
-        Items = preparedPackage.Items;
+        internal PreparedPackage(
+            OrderNumber orderNumber,
+            DeliveryAddress deliveryAddress,
+            AWB trackingNumber,
+            DateTime preparedAt)
+        {
+            OrderNumber = orderNumber;
+            DeliveryAddress = deliveryAddress;
+            TrackingNumber = trackingNumber;
+            PreparedAt = preparedAt;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public DeliveryAddress DeliveryAddress { get; }
+        public AWB TrackingNumber { get; }
+        public DateTime PreparedAt { get; }
     }
-}
-
-public record DeliveredPackage(
-    string Id,
-    string OrderId,
-    AWB AWB,
-    DeliveryAddress DeliveryAddress,
-    DateTime PreparedAt,
-    DateTime PickedUpAt,
-    DateTime DeliveredAt,
-    string ReceivedBy
-) : IPackage
-{
-    public IReadOnlyCollection<PackageItem> Items { get; init; } = new List<PackageItem>().AsReadOnly();
     
-    internal DeliveredPackage(InTransitPackage inTransitPackage, string receivedBy)
-        : this(
-            inTransitPackage.Id,
-            inTransitPackage.OrderId,
-            inTransitPackage.AWB,
-            inTransitPackage.DeliveryAddress,
-            inTransitPackage.PreparedAt,
-            inTransitPackage.PickedUpAt,
-            DateTime.UtcNow,
-            receivedBy
-        )
+    public record ShippedPackage : IPackage
     {
-        Items = inTransitPackage.Items;
+        internal ShippedPackage(
+            OrderNumber orderNumber,
+            DeliveryAddress deliveryAddress,
+            AWB trackingNumber,
+            DateTime shippedAt)
+        {
+            OrderNumber = orderNumber;
+            DeliveryAddress = deliveryAddress;
+            TrackingNumber = trackingNumber;
+            ShippedAt = shippedAt;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public DeliveryAddress DeliveryAddress { get; }
+        public AWB TrackingNumber { get; }
+        public DateTime ShippedAt { get; }
     }
-}
-
-public record ReturnedPackage(
-    string Id,
-    string OrderId,
-    AWB AWB,
-    DeliveryAddress DeliveryAddress,
-    DateTime PreparedAt,
-    DateTime PickedUpAt,
-    DateTime ReturnedAt,
-    string ReturnReason
-) : IPackage
-{
-    public IReadOnlyCollection<PackageItem> Items { get; init; } = new List<PackageItem>().AsReadOnly();
     
-    internal ReturnedPackage(InTransitPackage inTransitPackage, string returnReason)
-        : this(
-            inTransitPackage.Id,
-            inTransitPackage.OrderId,
-            inTransitPackage.AWB,
-            inTransitPackage.DeliveryAddress,
-            inTransitPackage.PreparedAt,
-            inTransitPackage.PickedUpAt,
-            DateTime.UtcNow,
-            returnReason
-        )
+    public record DeliveredPackage : IPackage
     {
-        Items = inTransitPackage.Items;
+        internal DeliveredPackage(
+            OrderNumber orderNumber,
+            AWB trackingNumber,
+            DateTime deliveredAt,
+            string recipientName)
+        {
+            OrderNumber = orderNumber;
+            TrackingNumber = trackingNumber;
+            DeliveredAt = deliveredAt;
+            RecipientName = recipientName;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public AWB TrackingNumber { get; }
+        public DateTime DeliveredAt { get; }
+        public string RecipientName { get; }
     }
-}
-
-public record InvalidPackage(
-    string OrderId,
-    DeliveryAddress DeliveryAddress,
-    IEnumerable<string> Reasons
-) : IPackage
-{
-    public IReadOnlyCollection<PackageItem> Items { get; init; } = new List<PackageItem>().AsReadOnly();
     
-    internal InvalidPackage(string orderId, DeliveryAddress deliveryAddress, IReadOnlyCollection<PackageItem> items, params string[] reasons)
-        : this(orderId, deliveryAddress, reasons.ToList().AsReadOnly())
+    public record InvalidPackage : IPackage
     {
-        Items = items;
+        internal InvalidPackage(IEnumerable<string> reasons)
+        {
+            Reasons = reasons;
+        }
+        
+        public IEnumerable<string> Reasons { get; }
     }
 }

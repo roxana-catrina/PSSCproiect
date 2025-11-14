@@ -1,202 +1,106 @@
-namespace Proiect.Domain.Models.Entities;
-
 using Proiect.Domain.Models.ValueObjects;
 
-public interface IOrder { }
+namespace Proiect.Domain.Models.Entities;
 
-public record PendingOrder(
-    string Id,
-    OrderNumber OrderNumber,
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    decimal TotalAmount,
-    DateTime CreatedAt
-) : IOrder
+public static class Order
 {
-    internal PendingOrder(string customerName, string customerEmail, DeliveryAddress deliveryAddress, IReadOnlyCollection<OrderLine> orderLines)
-        : this(
-            Guid.NewGuid().ToString(),
-            OrderNumber.Generate(),
-            customerName,
-            customerEmail,
-            deliveryAddress,
-            orderLines,
-            orderLines.Sum(ol => ol.TotalPrice),
-            DateTime.UtcNow
-        )
-    { }
-}
-
-public record ConfirmedOrder(
-    string Id,
-    OrderNumber OrderNumber,
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    decimal TotalAmount,
-    DateTime CreatedAt,
-    DateTime ConfirmedAt
-) : IOrder
-{
-    internal ConfirmedOrder(PendingOrder pendingOrder)
-        : this(
-            pendingOrder.Id,
-            pendingOrder.OrderNumber,
-            pendingOrder.CustomerName,
-            pendingOrder.CustomerEmail,
-            pendingOrder.DeliveryAddress,
-            pendingOrder.OrderLines,
-            pendingOrder.TotalAmount,
-            pendingOrder.CreatedAt,
-            DateTime.UtcNow
-        )
-    { }
-}
-
-public record PaidOrder(
-    string Id,
-    OrderNumber OrderNumber,
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    decimal TotalAmount,
-    DateTime CreatedAt,
-    DateTime ConfirmedAt,
-    DateTime PaidAt
-) : IOrder
-{
-    internal PaidOrder(ConfirmedOrder confirmedOrder)
-        : this(
-            confirmedOrder.Id,
-            confirmedOrder.OrderNumber,
-            confirmedOrder.CustomerName,
-            confirmedOrder.CustomerEmail,
-            confirmedOrder.DeliveryAddress,
-            confirmedOrder.OrderLines,
-            confirmedOrder.TotalAmount,
-            confirmedOrder.CreatedAt,
-            confirmedOrder.ConfirmedAt,
-            DateTime.UtcNow
-        )
-    { }
-}
-
-public record ShippedOrder(
-    string Id,
-    OrderNumber OrderNumber,
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    decimal TotalAmount,
-    DateTime CreatedAt,
-    DateTime ConfirmedAt,
-    DateTime PaidAt,
-    DateTime ShippedAt
-) : IOrder
-{
-    internal ShippedOrder(PaidOrder paidOrder)
-        : this(
-            paidOrder.Id,
-            paidOrder.OrderNumber,
-            paidOrder.CustomerName,
-            paidOrder.CustomerEmail,
-            paidOrder.DeliveryAddress,
-            paidOrder.OrderLines,
-            paidOrder.TotalAmount,
-            paidOrder.CreatedAt,
-            paidOrder.ConfirmedAt,
-            paidOrder.PaidAt,
-            DateTime.UtcNow
-        )
-    { }
-}
-
-public record DeliveredOrder(
-    string Id,
-    OrderNumber OrderNumber,
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    decimal TotalAmount,
-    DateTime CreatedAt,
-    DateTime ConfirmedAt,
-    DateTime PaidAt,
-    DateTime ShippedAt,
-    DateTime DeliveredAt
-) : IOrder
-{
-    internal DeliveredOrder(ShippedOrder shippedOrder)
-        : this(
-            shippedOrder.Id,
-            shippedOrder.OrderNumber,
-            shippedOrder.CustomerName,
-            shippedOrder.CustomerEmail,
-            shippedOrder.DeliveryAddress,
-            shippedOrder.OrderLines,
-            shippedOrder.TotalAmount,
-            shippedOrder.CreatedAt,
-            shippedOrder.ConfirmedAt,
-            shippedOrder.PaidAt,
-            shippedOrder.ShippedAt,
-            DateTime.UtcNow
-        )
-    { }
-}
-
-public record CancelledOrder(
-    string Id,
-    OrderNumber OrderNumber,
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    decimal TotalAmount,
-    DateTime CreatedAt,
-    DateTime CancelledAt,
-    string CancellationReason
-) : IOrder
-{
-    internal CancelledOrder(PendingOrder pendingOrder, string cancellationReason)
-        : this(
-            pendingOrder.Id,
-            pendingOrder.OrderNumber,
-            pendingOrder.CustomerName,
-            pendingOrder.CustomerEmail,
-            pendingOrder.DeliveryAddress,
-            pendingOrder.OrderLines,
-            pendingOrder.TotalAmount,
-            pendingOrder.CreatedAt,
-            DateTime.UtcNow,
-            cancellationReason
-        )
-    { }
-}
-
-public record InvalidOrder(
-    string CustomerName,
-    string CustomerEmail,
-    DeliveryAddress DeliveryAddress,
-    IReadOnlyCollection<OrderLine> OrderLines,
-    IEnumerable<string> Reasons
-) : IOrder
-{
-    internal InvalidOrder(string customerName, string customerEmail, DeliveryAddress deliveryAddress, IReadOnlyCollection<OrderLine> orderLines, params string[] reasons)
-        : this(customerName, customerEmail, deliveryAddress, orderLines, reasons.ToList().AsReadOnly())
-    { }
-}
-
-public record OrderLine(
-    string ProductId,
-    string ProductName,
-    int Quantity,
-    decimal UnitPrice
-)
-{
-    public decimal TotalPrice => Quantity * UnitPrice;
+    public interface IOrder { }
+    
+    public record UnvalidatedOrder(
+        string CustomerName,
+        string CustomerEmail,
+        string DeliveryStreet,
+        string DeliveryCity,
+        string DeliveryPostalCode,
+        string DeliveryCountry,
+        IReadOnlyList<UnvalidatedOrderItem> Items) : IOrder;
+    
+    public record UnvalidatedOrderItem(string ProductName, string Quantity, string UnitPrice);
+    
+    public record ValidatedOrder : IOrder
+    {
+        internal ValidatedOrder(
+            string customerName,
+            string customerEmail,
+            DeliveryAddress deliveryAddress,
+            IReadOnlyCollection<ValidatedOrderItem> items)
+        {
+            CustomerName = customerName;
+            CustomerEmail = customerEmail;
+            DeliveryAddress = deliveryAddress;
+            Items = items;
+        }
+        
+        public string CustomerName { get; }
+        public string CustomerEmail { get; }
+        public DeliveryAddress DeliveryAddress { get; }
+        public IReadOnlyCollection<ValidatedOrderItem> Items { get; }
+    }
+    
+    public record ValidatedOrderItem(string ProductName, int Quantity, Price UnitPrice);
+    
+    public record ConfirmedOrder : IOrder
+    {
+        internal ConfirmedOrder(
+            OrderNumber orderNumber,
+            string customerName,
+            string customerEmail,
+            DeliveryAddress deliveryAddress,
+            IReadOnlyCollection<ValidatedOrderItem> items,
+            Price totalAmount,
+            DateTime confirmedAt)
+        {
+            OrderNumber = orderNumber;
+            CustomerName = customerName;
+            CustomerEmail = customerEmail;
+            DeliveryAddress = deliveryAddress;
+            Items = items;
+            TotalAmount = totalAmount;
+            ConfirmedAt = confirmedAt;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public string CustomerName { get; }
+        public string CustomerEmail { get; }
+        public DeliveryAddress DeliveryAddress { get; }
+        public IReadOnlyCollection<ValidatedOrderItem> Items { get; }
+        public Price TotalAmount { get; }
+        public DateTime ConfirmedAt { get; }
+    }
+    
+    public record PaidOrder : IOrder
+    {
+        internal PaidOrder(
+            OrderNumber orderNumber,
+            string customerName,
+            DeliveryAddress deliveryAddress,
+            IReadOnlyCollection<ValidatedOrderItem> items,
+            Price totalAmount,
+            DateTime paidAt)
+        {
+            OrderNumber = orderNumber;
+            CustomerName = customerName;
+            DeliveryAddress = deliveryAddress;
+            Items = items;
+            TotalAmount = totalAmount;
+            PaidAt = paidAt;
+        }
+        
+        public OrderNumber OrderNumber { get; }
+        public string CustomerName { get; }
+        public DeliveryAddress DeliveryAddress { get; }
+        public IReadOnlyCollection<ValidatedOrderItem> Items { get; }
+        public Price TotalAmount { get; }
+        public DateTime PaidAt { get; }
+    }
+    
+    public record InvalidOrder : IOrder
+    {
+        internal InvalidOrder(IEnumerable<string> reasons)
+        {
+            Reasons = reasons;
+        }
+        
+        public IEnumerable<string> Reasons { get; }
+    }
 }

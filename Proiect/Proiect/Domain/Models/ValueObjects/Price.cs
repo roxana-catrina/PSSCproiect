@@ -1,93 +1,62 @@
+using Proiect.Domain.Exceptions;
+
 namespace Proiect.Domain.Models.ValueObjects;
 
 /// <summary>
-/// Represents a price with amount and currency
+/// Value object representing a monetary price
+/// Must be positive and have maximum 2 decimal places
 /// </summary>
 public record Price
 {
-    /// <summary>
-    /// Gets the price amount
-    /// </summary>
-    public decimal Amount { get; }
+    public decimal Value { get; }
     
-    /// <summary>
-    /// Gets the currency code
-    /// </summary>
-    public string Currency { get; }
-
-    /// <summary>
-    /// Private constructor for Price
-    /// </summary>
-    /// <param name="amount">The price amount</param>
-    /// <param name="currency">The currency code (default: RON)</param>
-    /// <exception cref="InvalidPriceException">Thrown when the price is invalid</exception>
-    private Price(decimal amount, string currency = "RON")
+    internal Price(decimal value)
     {
-        if (!IsValid(amount, currency))
-            throw new InvalidPriceException("Price amount cannot be negative and currency cannot be empty");
-
-        Amount = amount;
-        Currency = currency;
+        if (IsValid(value))
+            Value = value;
+        else
+            throw new InvalidPriceException($"Invalid price: {value}. Price must be positive and have maximum 2 decimal places.");
     }
-
-    /// <summary>
-    /// Validates the price components
-    /// </summary>
-    /// <param name="amount">The price amount</param>
-    /// <param name="currency">The currency code</param>
-    /// <returns>True if valid, false otherwise</returns>
-    private static bool IsValid(decimal amount, string currency)
+    
+    private static bool IsValid(decimal value)
     {
-        return amount >= 0 && !string.IsNullOrWhiteSpace(currency);
-    }
-
-    /// <summary>
-    /// Tries to parse price components into a Price
-    /// </summary>
-    /// <param name="amount">The price amount</param>
-    /// <param name="currency">The currency code</param>
-    /// <param name="price">The resulting Price if successful, null otherwise</param>
-    /// <returns>True if parsing succeeded, false otherwise</returns>
-    public static bool TryParse(decimal amount, string currency, out Price? price)
-    {
-        price = null;
-        
-        if (!IsValid(amount, currency))
+        if (value <= 0)
             return false;
-        
-        price = new Price(amount, currency);
-        return true;
+            
+        // Check for maximum 2 decimal places
+        var decimalPlaces = BitConverter.GetBytes(decimal.GetBits(value)[3])[2];
+        return decimalPlaces <= 2;
     }
-
-    /// <summary>
-    /// Adds two prices with the same currency
-    /// </summary>
-    /// <param name="other">The other price to add</param>
-    /// <returns>A new Price with the sum of amounts</returns>
-    /// <exception cref="InvalidOperationException">Thrown when currencies don't match</exception>
-    public Price Add(Price other)
+    
+    public static bool TryParse(string input, out Price? result)
     {
-        if (Currency != other.Currency)
-            throw new InvalidOperationException("Cannot add prices with different currencies");
-        
-        return new Price(Amount + other.Amount, Currency);
+        result = null;
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+            
+        if (!decimal.TryParse(input, out var decimalValue))
+            return false;
+            
+        if (!IsValid(decimalValue))
+            return false;
+            
+        try
+        {
+            result = new Price(decimalValue);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
-
-    /// <summary>
-    /// Multiplies the price by a quantity
-    /// </summary>
-    /// <param name="quantity">The quantity multiplier</param>
-    /// <returns>A new Price with the multiplied amount</returns>
-    public Price Multiply(int quantity)
-    {
-        return new Price(Amount * quantity, Currency);
-    }
-
-    /// <summary>
-    /// Returns the string representation of the price
-    /// </summary>
-    /// <returns>The formatted price as string</returns>
-    public override string ToString() => $"{Amount:F2} {Currency}";
+    
+    public static Price Zero => new Price(0.01m);
+    
+    public static Price operator +(Price a, Price b) => new Price(a.Value + b.Value);
+    public static Price operator *(Price price, int quantity) => new Price(price.Value * quantity);
+    
+    public override string ToString() => Value.ToString("F2");
 }
 
 /// <summary>
