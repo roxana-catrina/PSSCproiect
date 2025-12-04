@@ -7,7 +7,8 @@ public record PlaceOrderCommand(
     string DeliveryCity,
     string DeliveryPostalCode,
     string DeliveryCountry,
-    IReadOnlyList<OrderItemCommand> Items);
+    IReadOnlyList<OrderItemCommand> Items,
+    string? OrderNumber = null);
 
 public record OrderItemCommand(
     string ProductName,
