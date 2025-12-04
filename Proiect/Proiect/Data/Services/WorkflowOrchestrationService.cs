@@ -141,16 +141,30 @@ namespace Proiect.Data.Services
             var existingPackage = await _packageStateService.LoadPackageAsync(command.OrderNumber);
 
             // 3. Implementează funcțiile necesare
-            Func<string> generateAwb = () => $"RO{DateTime.UtcNow:yyyyMMddHHmm}{new Random().Next(10, 99)}";
+            // Generate AWB with correct format: 2 letters + 10 digits (e.g., RO1234567890)
+            Func<string> generateAwb = () => 
+            {
+                var timestamp = DateTime.UtcNow.ToString("yyMMddHHmm"); // 10 digits: year(2) + month(2) + day(2) + hour(2) + minute(2)
+                return $"RO{timestamp}";
+            };
             Func<string, bool> notifyCourier = (awbNumber) =>
             {
                 // Simulare notificare curier
                 return !string.IsNullOrEmpty(awbNumber);
             };
+            Func<string, string> getRecipientName = (orderNumber) =>
+            {
+                // Get recipient name from existing order
+                if (existingOrder is ConfirmedOrder confirmed)
+                {
+                    return confirmed.CustomerName;
+                }
+                return string.Empty;
+            };
 
             // 4. Execută workflow-ul de expediere
             var workflow = new ShippingWorkflow();
-            var result = workflow.Execute(command, generateAwb, notifyCourier);
+            var result = workflow.Execute(command, generateAwb, notifyCourier, getRecipientName);
 
             // 5. Salvează rezultatul în baza de date
             if (result is PackageDeliveredEvent.PackageDeliveredSucceededEvent succeeded &&
