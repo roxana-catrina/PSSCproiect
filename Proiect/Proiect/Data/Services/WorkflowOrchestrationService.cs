@@ -43,7 +43,7 @@ namespace Proiect.Data.Services
                 return _orderStateService.CheckStockAvailabilityAsync(productName, quantity).Result;
             };
 
-            Func<string> generateOrderNumber = () => $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+            Func<string> generateOrderNumber = () => $"ORD-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(1000, 9999)}";
 
             // 3. Execută workflow-ul
             var workflow = new OrderProcessingWorkflow();
