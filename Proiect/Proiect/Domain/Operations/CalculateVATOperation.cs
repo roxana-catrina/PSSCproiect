@@ -16,8 +16,9 @@ internal sealed class CalculateVATOperation : InvoiceOperation
     
     protected override IInvoice OnValidated(ValidatedInvoice invoice)
     {
-        // Calculate VAT
-        var vatAmount = new Price(invoice.TotalAmount.Value * _vatRate);
+        // Calculate VAT and round to 2 decimal places
+        var vatAmountValue = Math.Round(invoice.TotalAmount.Value * _vatRate, 2, MidpointRounding.AwayFromZero);
+        var vatAmount = new Price(vatAmountValue);
         var totalWithVat = invoice.TotalAmount + vatAmount;
         
         // Generate invoice number
