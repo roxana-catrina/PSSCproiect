@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Workflows;
 using Proiect.Domain.Models.Events;
+using Proiect.Data.Services;
 
 namespace Proiect.Controllers;
 
@@ -9,8 +9,15 @@ namespace Proiect.Controllers;
 [Route("api/[controller]")]
 public class InvoicesController : ControllerBase
 {
+    private readonly IWorkflowOrchestrationService _orchestrationService;
+
+    public InvoicesController(IWorkflowOrchestrationService orchestrationService)
+    {
+        _orchestrationService = orchestrationService;
+    }
+
     [HttpPost]
-    public IActionResult GenerateInvoice([FromBody] GenerateInvoiceRequest request)
+    public async Task<IActionResult> GenerateInvoice([FromBody] GenerateInvoiceRequest request)
     {
         try
         {
@@ -20,13 +27,8 @@ public class InvoicesController : ControllerBase
                 request.TotalAmount
             );
 
-            var workflow = new BillingWorkflow();
-            
-            // Mock dependencies
-            decimal vatRate = 0.19m; // 19% VAT
-            Func<string> generateInvoiceNumber = () => $"INV-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999):D4}";
-            
-            var invoiceEvent = workflow.Execute(command, vatRate, generateInvoiceNumber);
+            // Folosește serviciul de orchestrare care încarcă/salvează starea din/în baza de date
+            var invoiceEvent = await _orchestrationService.GenerateInvoiceAsync(command);
 
             return invoiceEvent switch
             {
@@ -43,22 +45,33 @@ public class InvoicesController : ControllerBase
                         totalWithVat = success.TotalWithVat.Value,
                         generatedAt = success.GeneratedAt
                     },
-                    message = "Invoice generated successfully"
+                    message = "Invoice generated successfully and saved to database"
                 }),
+
                 InvoiceGeneratedEvent.InvoiceGeneratedFailedEvent failure => BadRequest(new
                 {
                     success = false,
                     errors = failure.Reasons,
-                    message = "Failed to generate invoice"
+                    message = "Invoice generation failed"
                 }),
-                _ => StatusCode(500, new { success = false, message = "Unexpected error" })
+
+                _ => StatusCode(500, new { success = false, message = "Unknown error occurred" })
             };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while generating the invoice",
+                error = ex.Message
+            });
         }
     }
 }
 
-public record GenerateInvoiceRequest(string OrderNumber, string CustomerName, string TotalAmount);
+public record GenerateInvoiceRequest(
+    string OrderNumber,
+    string CustomerName,
+    string TotalAmount
+);

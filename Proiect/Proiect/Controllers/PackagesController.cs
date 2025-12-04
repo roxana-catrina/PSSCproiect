@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Workflows;
 using Proiect.Domain.Models.Events;
+using Proiect.Data.Services;
 
 namespace Proiect.Controllers;
 
@@ -9,8 +9,15 @@ namespace Proiect.Controllers;
 [Route("api/[controller]")]
 public class PackagesController : ControllerBase
 {
+    private readonly IWorkflowOrchestrationService _orchestrationService;
+
+    public PackagesController(IWorkflowOrchestrationService orchestrationService)
+    {
+        _orchestrationService = orchestrationService;
+    }
+
     [HttpPost("pickup")]
-    public IActionResult PickupPackage([FromBody] PickupPackageRequest request)
+    public async Task<IActionResult> PickupPackage([FromBody] PickupPackageRequest request)
     {
         try
         {
@@ -22,13 +29,8 @@ public class PackagesController : ControllerBase
                 request.DeliveryCountry
             );
 
-            var workflow = new ShippingWorkflow();
-            
-            // Mock dependencies
-            Func<string> generateAwb = () => $"RO{DateTime.Now:yyyyMMddHHmm}{new Random().Next(10, 99):D2}";
-            Func<string, bool> notifyCourier = (awb) => true; // Always successful
-            
-            var packageEvent = workflow.Execute(command, generateAwb, notifyCourier);
+            // Folosește serviciul de orchestrare care încarcă/salvează starea din/în baza de date
+            var packageEvent = await _orchestrationService.ProcessShippingAsync(command);
 
             return packageEvent switch
             {
@@ -42,20 +44,27 @@ public class PackagesController : ControllerBase
                         recipientName = success.RecipientName,
                         deliveredAt = success.DeliveredAt
                     },
-                    message = "Package shipped successfully"
+                    message = "Package shipped successfully and saved to database"
                 }),
+
                 PackageDeliveredEvent.PackageDeliveredFailedEvent failure => BadRequest(new
                 {
                     success = false,
                     errors = failure.Reasons,
                     message = "Failed to ship package"
                 }),
-                _ => StatusCode(500, new { success = false, message = "Unexpected error" })
+
+                _ => StatusCode(500, new { success = false, message = "Unknown error occurred" })
             };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while processing the package",
+                error = ex.Message
+            });
         }
     }
 }
@@ -65,4 +74,5 @@ public record PickupPackageRequest(
     string DeliveryStreet,
     string DeliveryCity,
     string DeliveryPostalCode,
-    string DeliveryCountry);
+    string DeliveryCountry
+);

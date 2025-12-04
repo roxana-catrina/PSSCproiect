@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Proiect.Domain.Models.Commands;
-using Proiect.Domain.Workflows;
 using Proiect.Domain.Models.Events;
+using Proiect.Data.Services;
 
 namespace Proiect.Controllers;
 
@@ -9,8 +9,15 @@ namespace Proiect.Controllers;
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
 {
+    private readonly IWorkflowOrchestrationService _orchestrationService;
+
+    public OrdersController(IWorkflowOrchestrationService orchestrationService)
+    {
+        _orchestrationService = orchestrationService;
+    }
+
     [HttpPost]
-    public IActionResult PlaceOrder([FromBody] PlaceOrderRequest request)
+    public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request)
     {
         try
         {
@@ -28,13 +35,8 @@ public class OrdersController : ControllerBase
                 items
             );
 
-            var workflow = new OrderProcessingWorkflow();
-            
-            // Mock dependencies
-            Func<string, int, bool> checkStockAvailability = (productName, quantity) => true; // Always available
-            Func<string> generateOrderNumber = () => $"ORD-{DateTime.Now:yyyyMMdd}-{new Random().Next(1, 9999):D4}";
-            
-            var orderEvent = workflow.Execute(command, checkStockAvailability, generateOrderNumber);
+            // Folosește serviciul de orchestrare care încarcă/salvează starea din/în baza de date
+            var orderEvent = await _orchestrationService.ProcessOrderAsync(command);
 
             return orderEvent switch
             {
@@ -49,20 +51,27 @@ public class OrdersController : ControllerBase
                         totalAmount = success.TotalAmount.Value,
                         placedAt = success.PlacedAt
                     },
-                    message = "Order placed successfully"
+                    message = "Order placed successfully and saved to database"
                 }),
+
                 OrderPlacedEvent.OrderPlacedFailedEvent failure => BadRequest(new
                 {
                     success = false,
                     errors = failure.Reasons,
-                    message = "Failed to place order"
+                    message = "Order placement failed"
                 }),
-                _ => StatusCode(500, new { success = false, message = "Unexpected error" })
+
+                _ => StatusCode(500, new { success = false, message = "Unknown error occurred" })
             };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "An error occurred", error = ex.Message });
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while processing the order",
+                error = ex.Message
+            });
         }
     }
 }
@@ -74,6 +83,11 @@ public record PlaceOrderRequest(
     string DeliveryCity,
     string DeliveryPostalCode,
     string DeliveryCountry,
-    List<OrderItemRequest> Items);
+    List<OrderItemRequest> Items
+);
 
-public record OrderItemRequest(string ProductName, string Quantity, string UnitPrice);
+public record OrderItemRequest(
+    string ProductName,
+    string Quantity,
+    string UnitPrice
+);
