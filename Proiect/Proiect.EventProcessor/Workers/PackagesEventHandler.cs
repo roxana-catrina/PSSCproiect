@@ -1,10 +1,10 @@
 ﻿using Proiect.Domain.Models.Commands;
 using Proiect.Domain.Workflows;
-using static Proiect.Domain.Models.Events.PackageDeliveredEvent;
 using Proiect.Domain.Models.Events;
 using Proiect.Messaging.Events;
 using Proiect.Messaging.Events.Models;
 using Microsoft.Extensions.DependencyInjection;
+using static Proiect.Domain.Models.Events.PackageShippedEvent;
 
 namespace Proiect.EventProcessor.Workers;
 
@@ -29,31 +29,38 @@ internal class PackagesEventHandler : AbstractEventHandler<PickupPackageCommand>
         var workflow = scope.ServiceProvider.GetRequiredService<ShippingWorkflow>();
         var eventSender = scope.ServiceProvider.GetRequiredService<IEventSender>();
 
-        // Execute workflow
+        // Execute workflow (only 2 parameters now)
         var workflowResult = workflow.Execute(
             command,
-            generateAwb: () => $"AWB-{Guid.NewGuid().ToString()[..10].ToUpper()}",
-            notifyCourier: (awb) => true,
-            getRecipientName: (orderNumber) => "Customer"
+            generateAwb: () => $"RO{DateTime.UtcNow:yyMMddHHmm}",
+            notifyCourier: (awb) => true
         );
 
         // Handle result and publish event
-        if (workflowResult is PackageDeliveredSucceededEvent successEvent)
+        if (workflowResult is PackageShippedSucceededEvent successEvent)
         {
-            await eventSender.SendAsync("package-events", new PackageDeliveredDto
+            await eventSender.SendAsync("package-events", new PackageShippedDto
             {
                 OrderNumber = successEvent.OrderNumber.Value,
                 TrackingNumber = successEvent.TrackingNumber.Value,
-                DeliveredAt = successEvent.DeliveredAt,
-                RecipientName = successEvent.RecipientName
+                ShippedAt = successEvent.ShippedAt,
+                DeliveryAddress = new Proiect.Domain.Models.Events.DeliveryAddressDto
+                {
+                    Street = successEvent.DeliveryAddress.Street,
+                    City = successEvent.DeliveryAddress.City,
+                    PostalCode = successEvent.DeliveryAddress.PostalCode,
+                    Country = successEvent.DeliveryAddress.Country
+                },
+                CourierMessage = "The recipient will be contacted by the delivery man"
             });
 
-            Console.WriteLine($"Package {successEvent.TrackingNumber.Value} delivered successfully");
+            Console.WriteLine($"Package {successEvent.TrackingNumber.Value} shipped successfully");
+            Console.WriteLine($"📞 The recipient will be contacted by the delivery man");
             return EventProcessingResult.Completed;
         }
-        else if (workflowResult is PackageDeliveredFailedEvent failedEvent)
+        else if (workflowResult is PackageShippedFailedEvent failedEvent)
         {
-            Console.WriteLine($"Package delivery failed: {string.Join(", ", failedEvent.Reasons)}");
+            Console.WriteLine($"Package shipping failed: {string.Join(", ", failedEvent.Reasons)}");
             return EventProcessingResult.Failed;
         }
 

@@ -9,7 +9,8 @@ namespace Proiect.Data.Services
     {
         Task<IPackage?> LoadPackageAsync(string orderNumber);
         Task SavePackageAsync(IPackage package);
-        Task SavePackageFromEventAsync(string orderNumber, string trackingNumber, DateTime deliveredAt, string recipientName);
+        Task SaveShippedPackageFromEventAsync(string orderNumber, string trackingNumber, DateTime shippedAt, 
+            string street, string city, string postalCode, string country);
     }
 
     public class PackageStateService : IPackageStateService
@@ -39,13 +40,6 @@ namespace Proiect.Data.Services
 
             return dbPackage.Status switch
             {
-                "Delivered" when AWB.TryParse(dbPackage.AWBNumber ?? string.Empty, out var awb1) && awb1 != null => 
-                    new DeliveredPackage(
-                        orderNum,
-                        awb1,
-                        dbPackage.DeliveredAt ?? DateTime.UtcNow,
-                        dbPackage.Order.CustomerName),
-                
                 "Shipped" when AWB.TryParse(dbPackage.AWBNumber ?? string.Empty, out var awb2) && awb2 != null =>
                     new ShippedPackage(
                         orderNum,
@@ -72,9 +66,6 @@ namespace Proiect.Data.Services
         {
             switch (package)
             {
-                case DeliveredPackage delivered:
-                    await SaveDeliveredPackageAsync(delivered);
-                    break;
                 case ShippedPackage shipped:
                     await SaveShippedPackageAsync(shipped);
                     break;
@@ -87,7 +78,8 @@ namespace Proiect.Data.Services
             }
         }
 
-        public async Task SavePackageFromEventAsync(string orderNumber, string trackingNumber, DateTime deliveredAt, string recipientName)
+        public async Task SaveShippedPackageFromEventAsync(string orderNumber, string trackingNumber, DateTime shippedAt, 
+            string street, string city, string postalCode, string country)
         {
             var order = await _context.Orders
                 .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
@@ -99,8 +91,8 @@ namespace Proiect.Data.Services
 
             if (existingPackage != null)
             {
-                existingPackage.Status = "Delivered";
-                existingPackage.DeliveredAt = deliveredAt;
+                existingPackage.Status = "Shipped";
+                existingPackage.ShippedAt = shippedAt;
                 existingPackage.AWBNumber = trackingNumber;
             }
             else
@@ -109,39 +101,8 @@ namespace Proiect.Data.Services
                 {
                     OrderId = order.Id,
                     AWBNumber = trackingNumber,
-                    Status = "Delivered",
-                    DeliveredAt = deliveredAt
-                };
-                _context.Packages.Add(newPackage);
-            }
-
-            await _context.SaveChangesAsync();
-        }
-
-        private async Task SaveDeliveredPackageAsync(DeliveredPackage delivered)
-        {
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(o => o.OrderNumber == delivered.OrderNumber.Value);
-
-            if (order == null) return;
-
-            var existingPackage = await _context.Packages
-                .FirstOrDefaultAsync(p => p.OrderId == order.Id);
-
-            if (existingPackage != null)
-            {
-                existingPackage.Status = "Delivered";
-                existingPackage.DeliveredAt = delivered.DeliveredAt;
-                existingPackage.AWBNumber = delivered.TrackingNumber.Value;
-            }
-            else
-            {
-                var newPackage = new Package
-                {
-                    OrderId = order.Id,
-                    AWBNumber = delivered.TrackingNumber.Value,
-                    Status = "Delivered",
-                    DeliveredAt = delivered.DeliveredAt
+                    Status = "Shipped",
+                    ShippedAt = shippedAt
                 };
                 _context.Packages.Add(newPackage);
             }

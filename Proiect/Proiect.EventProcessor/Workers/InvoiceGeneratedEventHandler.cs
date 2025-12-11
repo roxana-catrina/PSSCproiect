@@ -4,14 +4,14 @@ using Proiect.Domain.Workflows;
 using Proiect.Messaging.Events;
 using Proiect.Messaging.Events.Models;
 using Proiect.Data.Services;
-using static Proiect.Domain.Models.Events.PackageDeliveredEvent;
+using static Proiect.Domain.Models.Events.PackageShippedEvent;
 
 namespace Proiect.EventProcessor.Workers;
 
 /// <summary>
 /// Event handler for processing InvoiceGenerated events
 /// Listens to events published after invoices are successfully generated
-/// TRIGGERS: ShippingWorkflow to prepare package for delivery automatically
+/// TRIGGERS: ShippingWorkflow to prepare package for shipping automatically
 /// </summary>
 internal class InvoiceGeneratedEventHandler : AbstractEventHandler<InvoiceGeneratedDto>
 {
@@ -62,40 +62,49 @@ internal class InvoiceGeneratedEventHandler : AbstractEventHandler<InvoiceGenera
             );
 
             // Execute shipping workflow
-            IPackageDeliveredEvent workflowResult = shippingWorkflow.Execute(
+            IPackageShippedEvent workflowResult = shippingWorkflow.Execute(
                 command,
-                generateAwb: () => $"RO{DateTime.UtcNow:yyMMddHHmm}", // Format: RO + 10 digits (yy=2, MM=2, dd=2, HH=2, mm=2)
-                notifyCourier: _ => true, // Simulate courier notification
-                getRecipientName: _ => eventData.CustomerName
+                generateAwb: () => $"RO{DateTime.UtcNow:yyMMddHHmm}", // Format: RO + 10 digits
+                notifyCourier: _ => true // Simulate courier notification
             );
 
             // Handle result
-            if (workflowResult is PackageDeliveredSucceededEvent successEvent)
+            if (workflowResult is PackageShippedSucceededEvent successEvent)
             {
                 // Save to database using the state service
-                await packageStateService.SavePackageFromEventAsync(
+                await packageStateService.SaveShippedPackageFromEventAsync(
                     successEvent.OrderNumber.Value,
                     successEvent.TrackingNumber.Value,
-                    successEvent.DeliveredAt,
-                    successEvent.RecipientName
+                    successEvent.ShippedAt,
+                    successEvent.DeliveryAddress.Street,
+                    successEvent.DeliveryAddress.City,
+                    successEvent.DeliveryAddress.PostalCode,
+                    successEvent.DeliveryAddress.Country
                 );
 
                 Console.WriteLine($"[InvoiceGeneratedEventHandler] 💾 Package {successEvent.TrackingNumber.Value} saved to database");
 
-                // Publish PackageDeliveredDto event
-                await eventSender.SendAsync("package-events", new PackageDeliveredDto
+                // Publish PackageShippedDto event
+                await eventSender.SendAsync("package-events", new PackageShippedDto
                 {
                     OrderNumber = successEvent.OrderNumber.Value,
                     TrackingNumber = successEvent.TrackingNumber.Value,
-                    DeliveredAt = successEvent.DeliveredAt,
-                    RecipientName = successEvent.RecipientName
+                    ShippedAt = successEvent.ShippedAt,
+                    DeliveryAddress = new Proiect.Domain.Models.Events.DeliveryAddressDto
+                    {
+                        Street = successEvent.DeliveryAddress.Street,
+                        City = successEvent.DeliveryAddress.City,
+                        PostalCode = successEvent.DeliveryAddress.PostalCode,
+                        Country = successEvent.DeliveryAddress.Country
+                    },
+                    CourierMessage = "The recipient will be contacted by the delivery man"
                 });
 
                 Console.WriteLine($"[InvoiceGeneratedEventHandler] 📤 Package event published to package-events topic");
             }
-            else if (workflowResult is PackageDeliveredFailedEvent failedEvent)
+            else if (workflowResult is PackageShippedFailedEvent failedEvent)
             {
-                Console.WriteLine($"[InvoiceGeneratedEventHandler] ❌ Package delivery failed: {string.Join(", ", failedEvent.Reasons)}");
+                Console.WriteLine($"[InvoiceGeneratedEventHandler] ❌ Package shipping failed: {string.Join(", ", failedEvent.Reasons)}");
                 return EventProcessingResult.Failed;
             }
         }

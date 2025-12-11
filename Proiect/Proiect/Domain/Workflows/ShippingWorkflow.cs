@@ -2,6 +2,7 @@ using Proiect.Domain.Models.Commands;
 using Proiect.Domain.Models.Events;
 using Proiect.Domain.Operations;
 using static Proiect.Domain.Models.Entities.Package;
+using static Proiect.Domain.Models.Events.PackageShippedEvent;
 
 namespace Proiect.Domain.Workflows;
 
@@ -17,13 +18,11 @@ public class ShippingWorkflow
     /// <param name="command">The pickup package command with raw input data</param>
     /// <param name="generateAwb">Dependency to generate AWB tracking number</param>
     /// <param name="notifyCourier">Dependency to notify courier service</param>
-    /// <param name="getRecipientName">Dependency to get recipient name for delivery confirmation</param>
-    /// <returns>Package delivered event (success or failure)</returns>
-    public PackageDeliveredEvent.IPackageDeliveredEvent Execute(
+    /// <returns>Package shipped event (success or failure)</returns>
+    public IPackageShippedEvent Execute(
         PickupPackageCommand command,
         Func<string> generateAwb,
-        Func<string, bool> notifyCourier,
-        Func<string, string> getRecipientName)
+        Func<string, bool> notifyCourier)
     {
         // Step 1: Create unvalidated package from command
         var unvalidated = new UnvalidatedPackage(
@@ -37,9 +36,8 @@ public class ShippingWorkflow
         IPackage result = new ValidatePackageDataOperation().Transform(unvalidated);
         result = new AssignAWBOperation(generateAwb).Transform(result);
         result = new ShipPackageOperation(notifyCourier).Transform(result);
-        result = new DeliverPackageOperation(getRecipientName).Transform(result);
         
-        // Step 3: Convert final state to event
-        return result.ToEvent();
+        // Step 3: Convert final state to event using explicit PackageShippedEvent extension
+        return PackageShippedEvent.ToEvent(result);
     }
 }

@@ -3,7 +3,7 @@ using Proiect.Domain.Models.Commands;
 using Proiect.Domain.Models.Events;
 using Proiect.Domain.Workflows;
 using Proiect.Messaging.Events;
-using static Proiect.Domain.Models.Events.PackageDeliveredEvent;
+using static Proiect.Domain.Models.Events.PackageShippedEvent;
 
 namespace Proiect.Controllers;
 
@@ -41,18 +41,17 @@ public class PackagesController : ControllerBase
             );
 
             // Execute workflow with dependencies
-            IPackageDeliveredEvent workflowResult = _shippingWorkflow.Execute(
+            IPackageShippedEvent workflowResult = _shippingWorkflow.Execute(
                 command,
                 generateAwb: () => $"RO{DateTime.UtcNow:yyMMddHHmm}", // Format: RO + 10 digits
-                notifyCourier: (awb) => true, // Simulate courier notification
-                getRecipientName: (orderNumber) => request.RecipientName ?? "Customer"
+                notifyCourier: (awb) => true // Simulate courier notification
             );
 
             // Handle workflow result and save to database
             IActionResult response = workflowResult switch
             {
-                PackageDeliveredSucceededEvent @event => await SaveAndPublishEvent(@event, packageStateService),
-                PackageDeliveredFailedEvent @event => BadRequest(@event.Reasons),
+                PackageShippedSucceededEvent @event => await SaveAndPublishEvent(@event, packageStateService),
+                PackageShippedFailedEvent @event => BadRequest(@event.Reasons),
                 _ => throw new NotImplementedException()
             };
 
@@ -70,28 +69,37 @@ public class PackagesController : ControllerBase
         }
     }
 
-    private async Task<IActionResult> SaveAndPublishEvent(PackageDeliveredSucceededEvent successEvent, Proiect.Data.Services.IPackageStateService packageStateService)
+    private async Task<IActionResult> SaveAndPublishEvent(PackageShippedSucceededEvent successEvent, Proiect.Data.Services.IPackageStateService packageStateService)
     {
         try
         {
             // Save package to database
-            var deliveredPackage = new Proiect.Domain.Models.Entities.Package.DeliveredPackage(
-                successEvent.OrderNumber,
-                successEvent.TrackingNumber,
-                successEvent.DeliveredAt,
-                successEvent.RecipientName
+            await packageStateService.SaveShippedPackageFromEventAsync(
+                successEvent.OrderNumber.Value,
+                successEvent.TrackingNumber.Value,
+                successEvent.ShippedAt,
+                successEvent.DeliveryAddress.Street,
+                successEvent.DeliveryAddress.City,
+                successEvent.DeliveryAddress.PostalCode,
+                successEvent.DeliveryAddress.Country
             );
 
-            await packageStateService.SavePackageAsync(deliveredPackage);
             _logger.LogInformation($"Package {successEvent.TrackingNumber.Value} saved to database");
 
             // Publish event to Service Bus
-            await _eventSender.SendAsync("package-events", new PackageDeliveredDto
+            await _eventSender.SendAsync("package-events", new PackageShippedDto
             {
                 OrderNumber = successEvent.OrderNumber.Value,
                 TrackingNumber = successEvent.TrackingNumber.Value,
-                DeliveredAt = successEvent.DeliveredAt,
-                RecipientName = successEvent.RecipientName
+                ShippedAt = successEvent.ShippedAt,
+                DeliveryAddress = new Proiect.Domain.Models.Events.DeliveryAddressDto
+                {
+                    Street = successEvent.DeliveryAddress.Street,
+                    City = successEvent.DeliveryAddress.City,
+                    PostalCode = successEvent.DeliveryAddress.PostalCode,
+                    Country = successEvent.DeliveryAddress.Country
+                },
+                CourierMessage = "The recipient will be contacted by the delivery man"
             });
 
             _logger.LogInformation($"Package {successEvent.TrackingNumber.Value} event published");
@@ -100,9 +108,9 @@ public class PackagesController : ControllerBase
             {
                 success = true,
                 trackingNumber = successEvent.TrackingNumber.Value,
-                orderNumber = successEvent.OrderNumber.Value,
-                message = "Package pickup processed successfully",
-                deliveredAt = successEvent.DeliveredAt
+                message = "Package shipped successfully",
+                courierMessage = "The recipient will be contacted by the delivery man",
+                shippedAt = successEvent.ShippedAt
             });
         }
         catch (Exception ex)

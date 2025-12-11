@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Proiect.EventProcessor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+06505c9bf7bb7967e386e8148bf5da33759bebf5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8b2b1fbe96787141663963982d57f5de26cef877")]
 [assembly: System.Reflection.AssemblyProductAttribute("Proiect.EventProcessor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Proiect.EventProcessor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

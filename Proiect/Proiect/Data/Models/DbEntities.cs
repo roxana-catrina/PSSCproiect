@@ -161,11 +161,10 @@ namespace Proiect.Data.Models
         
         [Required]
         [StringLength(50)]
-        public string Status { get; set; } = "Unvalidated"; // Unvalidated, Validated, AWBAssigned, Shipped, Delivered, Invalid
+        public string Status { get; set; } = "Unvalidated"; // Unvalidated, Validated, AWBAssigned, Shipped, Invalid
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ShippedAt { get; set; }
-        public DateTime? DeliveredAt { get; set; }
         
         // Navigation property
         [ForeignKey("OrderId")]

@@ -13,7 +13,7 @@ namespace Proiect.Data.Services
     {
         Task<OrderPlacedEvent.IOrderPlacedEvent> ProcessOrderAsync(PlaceOrderCommand command);
         Task<InvoiceGeneratedEvent.IInvoiceGeneratedEvent> GenerateInvoiceAsync(GenerateInvoiceCommand command);
-        Task<PackageDeliveredEvent.IPackageDeliveredEvent> ProcessShippingAsync(PickupPackageCommand command);
+        Task<PackageShippedEvent.IPackageShippedEvent> ProcessShippingAsync(PickupPackageCommand command);
     }
 
     public class WorkflowOrchestrationService : IWorkflowOrchestrationService
@@ -129,20 +129,20 @@ namespace Proiect.Data.Services
             return result;
         }
 
-        public async Task<PackageDeliveredEvent.IPackageDeliveredEvent> ProcessShippingAsync(PickupPackageCommand command)
+        public async Task<PackageShippedEvent.IPackageShippedEvent> ProcessShippingAsync(PickupPackageCommand command)
         {
             // 1. Încarcă starea comenzii din baza de date
             var existingOrder = await _orderStateService.LoadOrderAsync(command.OrderNumber);
             if (existingOrder == null)
             {
-                return new PackageDeliveredEvent.PackageDeliveredFailedEvent(new[] { "Order not found in database" });
+                return new PackageShippedEvent.PackageShippedFailedEvent(new[] { "Order not found in database" });
             }
 
             // 2. Încarcă starea coletului din baza de date (dacă există)
             var existingPackage = await _packageStateService.LoadPackageAsync(command.OrderNumber);
 
             // 3. Implementează funcțiile necesare
-            // Generate AWB with correct format: 2 letters + 10 digits (e.g., RO1234567890)
+            // Generate AWB with correct format: 2 letters + 10 digits (e.g., RO2512111430)
             Func<string> generateAwb = () => 
             {
                 var timestamp = DateTime.UtcNow.ToString("yyMMddHHmm"); // 10 digits: year(2) + month(2) + day(2) + hour(2) + minute(2)
@@ -153,31 +153,22 @@ namespace Proiect.Data.Services
                 // Simulare notificare curier
                 return !string.IsNullOrEmpty(awbNumber);
             };
-            Func<string, string> getRecipientName = (orderNumber) =>
-            {
-                // Get recipient name from existing order
-                if (existingOrder is ConfirmedOrder confirmed)
-                {
-                    return confirmed.CustomerName;
-                }
-                return string.Empty;
-            };
 
-            // 4. Execută workflow-ul de expediere
+            // 4. Execută workflow-ul de expediere (fără getRecipientName)
             var workflow = new ShippingWorkflow();
-            var result = workflow.Execute(command, generateAwb, notifyCourier, getRecipientName);
+            var result = workflow.Execute(command, generateAwb, notifyCourier);
 
             // 5. Salvează rezultatul în baza de date
-            if (result is PackageDeliveredEvent.PackageDeliveredSucceededEvent succeeded &&
+            if (result is PackageShippedEvent.PackageShippedSucceededEvent succeeded &&
                 OrderNumber.TryParse(command.OrderNumber, out var orderNum) && orderNum != null)
             {
-                var deliveredPackage = new DeliveredPackage(
+                var shippedPackage = new ShippedPackage(
                     orderNum,
+                    succeeded.DeliveryAddress,
                     succeeded.TrackingNumber,
-                    succeeded.DeliveredAt,
-                    succeeded.RecipientName);
+                    succeeded.ShippedAt);
 
-                await _packageStateService.SavePackageAsync(deliveredPackage);
+                await _packageStateService.SavePackageAsync(shippedPackage);
             }
 
             return result;

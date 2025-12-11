@@ -55,7 +55,7 @@ internal class Program
                 // Event Handlers - Listen to events (DTOs) published by the API
                 services.AddSingleton<IEventHandler, OrderPlacedEventHandler>();
                 services.AddSingleton<IEventHandler, InvoiceGeneratedEventHandler>();
-                services.AddSingleton<IEventHandler, PackageDeliveredEventHandler>();
+                services.AddSingleton<IEventHandler, PackageShippedEventHandler>();
 
                 // Hosted Services - 3 separate workers for each topic
                 services.AddHostedService<OrderEventsWorker>();
