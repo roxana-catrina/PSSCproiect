@@ -18,7 +18,8 @@ public static class OrderPlacedEvent
             string deliveryStreet,
             string deliveryCity,
             string deliveryPostalCode,
-            string deliveryCountry)
+            string deliveryCountry,
+            IReadOnlyCollection<ValidatedOrderItem> items)
         {
             OrderNumber = orderNumber;
             CustomerName = customerName;
@@ -29,6 +30,7 @@ public static class OrderPlacedEvent
             DeliveryCity = deliveryCity;
             DeliveryPostalCode = deliveryPostalCode;
             DeliveryCountry = deliveryCountry;
+            Items = items;
         }
         
         public OrderNumber OrderNumber { get; }
@@ -40,6 +42,7 @@ public static class OrderPlacedEvent
         public string DeliveryCity { get; }
         public string DeliveryPostalCode { get; }
         public string DeliveryCountry { get; }
+        public IReadOnlyCollection<ValidatedOrderItem> Items { get; }
     }
     
     public record OrderPlacedFailedEvent : IOrderPlacedEvent
@@ -63,7 +66,8 @@ public static class OrderPlacedEvent
             confirmed.DeliveryAddress.Street,
             confirmed.DeliveryAddress.City,
             confirmed.DeliveryAddress.PostalCode,
-            confirmed.DeliveryAddress.Country),
+            confirmed.DeliveryAddress.Country,
+            confirmed.Items),
         InvalidOrder invalid => new OrderPlacedFailedEvent(invalid.Reasons),
         UnvalidatedOrder _ => new OrderPlacedFailedEvent(new[] { "Order was not validated" }),
         ValidatedOrder _ => new OrderPlacedFailedEvent(new[] { "Order was not confirmed" }),

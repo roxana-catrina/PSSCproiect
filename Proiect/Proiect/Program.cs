@@ -13,7 +13,12 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            Args = args,
+            ContentRootPath = Directory.GetCurrentDirectory(),
+            WebRootPath = null // Disable wwwroot
+        });
         
         // Load local configuration with secrets (not committed to Git)
         builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);

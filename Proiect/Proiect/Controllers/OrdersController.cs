@@ -99,13 +99,20 @@ public class OrdersController : ControllerBase
                     successEvent.CustomerName,
                     successEvent.CustomerEmail,
                     address,
-                    new List<ValidatedOrderItem>(), // Items will be reconstructed
+                    successEvent.Items.ToList(),
                     successEvent.TotalAmount,
                     successEvent.PlacedAt
                 );
 
                 await orderStateService.SaveOrderAsync(confirmedOrder);
                 _logger.LogInformation($"Order {successEvent.OrderNumber.Value} saved to database");
+                
+                // Update stock for each item in the order
+                foreach (var item in successEvent.Items)
+                {
+                    await orderStateService.UpdateStockAsync(item.ProductName, item.Quantity);
+                    _logger.LogInformation($"Stock updated for product '{item.ProductName}': decreased by {item.Quantity}");
+                }
             }
 
             // Publish event to Service Bus - using Events.DeliveryAddressDto
