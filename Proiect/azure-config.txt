@@ -1,0 +1,23 @@
+﻿=== Configurare Azure Service Bus ===
+Data: 2025-12-11 12:04:32
+
+Resource Group: PSSCproiect
+Namespace: PSSCproiect
+Location: italynorth
+
+Queue:
+  - order-commands
+
+Topics și Subscriptions:
+  - order-events
+    * shipping-subscription
+  - package-events
+    * billing-subscription
+  - invoice-events
+    * notification-subscription
+
+Connection String:
+YOUR_AZURE_SERVICE_BUS_CONNECTION_STRING_HERE
+
+Pentru a vedea resursele în Azure Portal:
+https://portal.azure.com/#@/resource/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/PSSCproiect/overview
