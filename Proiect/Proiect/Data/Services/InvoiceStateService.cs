@@ -9,6 +9,8 @@ namespace Proiect.Data.Services
     {
         Task<IInvoice?> LoadInvoiceAsync(string invoiceNumber);
         Task SaveInvoiceAsync(IInvoice invoice);
+        Task SaveInvoiceFromEventAsync(string invoiceNumber, string orderNumber, string customerName, 
+            decimal totalAmount, decimal vatAmount, decimal totalWithVat, DateTime generatedAt);
     }
 
     public class InvoiceStateService : IInvoiceStateService
@@ -63,6 +65,42 @@ namespace Proiect.Data.Services
                     await SaveValidatedInvoiceAsync(validated);
                     break;
             }
+        }
+
+        public async Task SaveInvoiceFromEventAsync(string invoiceNumber, string orderNumber, string customerName, 
+            decimal totalAmount, decimal vatAmount, decimal totalWithVat, DateTime generatedAt)
+        {
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
+
+            if (order == null) return;
+
+            var existingInvoice = await _context.Invoices
+                .FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber);
+
+            if (existingInvoice != null)
+            {
+                existingInvoice.Status = "Generated";
+                existingInvoice.GeneratedAt = generatedAt;
+                existingInvoice.VatAmount = vatAmount;
+                existingInvoice.TotalWithVat = totalWithVat;
+            }
+            else
+            {
+                var newInvoice = new Invoice
+                {
+                    InvoiceNumber = invoiceNumber,
+                    OrderId = order.Id,
+                    SubtotalAmount = totalAmount,
+                    VatAmount = vatAmount,
+                    TotalWithVat = totalWithVat,
+                    Status = "Generated",
+                    GeneratedAt = generatedAt
+                };
+                _context.Invoices.Add(newInvoice);
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         private async Task SaveGeneratedInvoiceAsync(GeneratedInvoice generated)

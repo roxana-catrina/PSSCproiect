@@ -57,7 +57,9 @@ internal class Program
                 services.AddSingleton<IEventHandler, InvoiceGeneratedEventHandler>();
                 services.AddSingleton<IEventHandler, PackageDeliveredEventHandler>();
 
-                // Hosted Service
-                services.AddHostedService<Worker>();
+                // Hosted Services - 3 separate workers for each topic
+                services.AddHostedService<OrderEventsWorker>();
+                services.AddHostedService<InvoiceEventsWorker>();
+                services.AddHostedService<PackageEventsWorker>();
             });
 }

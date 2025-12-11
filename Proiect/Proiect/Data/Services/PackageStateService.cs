@@ -9,6 +9,7 @@ namespace Proiect.Data.Services
     {
         Task<IPackage?> LoadPackageAsync(string orderNumber);
         Task SavePackageAsync(IPackage package);
+        Task SavePackageFromEventAsync(string orderNumber, string trackingNumber, DateTime deliveredAt, string recipientName);
     }
 
     public class PackageStateService : IPackageStateService
@@ -84,6 +85,37 @@ namespace Proiect.Data.Services
                     await SaveValidatedPackageAsync(validated);
                     break;
             }
+        }
+
+        public async Task SavePackageFromEventAsync(string orderNumber, string trackingNumber, DateTime deliveredAt, string recipientName)
+        {
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
+
+            if (order == null) return;
+
+            var existingPackage = await _context.Packages
+                .FirstOrDefaultAsync(p => p.OrderId == order.Id);
+
+            if (existingPackage != null)
+            {
+                existingPackage.Status = "Delivered";
+                existingPackage.DeliveredAt = deliveredAt;
+                existingPackage.AWBNumber = trackingNumber;
+            }
+            else
+            {
+                var newPackage = new Package
+                {
+                    OrderId = order.Id,
+                    AWBNumber = trackingNumber,
+                    Status = "Delivered",
+                    DeliveredAt = deliveredAt
+                };
+                _context.Packages.Add(newPackage);
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         private async Task SaveDeliveredPackageAsync(DeliveredPackage delivered)

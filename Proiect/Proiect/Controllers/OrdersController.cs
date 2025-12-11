@@ -4,7 +4,9 @@ using Proiect.Domain.Models.Events;
 using Proiect.Domain.Workflows;
 using Proiect.Messaging.Events;
 using Proiect.Data.Services;
+using Proiect.Domain.Models.ValueObjects;
 using static Proiect.Domain.Models.Events.OrderPlacedEvent;
+using static Proiect.Domain.Models.Entities.Order;
 
 namespace Proiect.Controllers;
 
@@ -83,7 +85,7 @@ public class OrdersController : ControllerBase
         try
         {
             // Save order to database
-            var deliveryAddress = Proiect.Domain.Models.ValueObjects.DeliveryAddress.TryParse(
+            var deliveryAddress = DeliveryAddress.TryParse(
                 successEvent.DeliveryStreet,
                 successEvent.DeliveryCity,
                 successEvent.DeliveryPostalCode,
@@ -92,12 +94,12 @@ public class OrdersController : ControllerBase
 
             if (deliveryAddress && address != null)
             {
-                var confirmedOrder = new Proiect.Domain.Models.Entities.Order.ConfirmedOrder(
+                var confirmedOrder = new ConfirmedOrder(
                     successEvent.OrderNumber,
                     successEvent.CustomerName,
                     successEvent.CustomerEmail,
                     address,
-                    new List<Proiect.Domain.Models.Entities.Order.ValidatedOrderItem>(), // Items will be reconstructed
+                    new List<ValidatedOrderItem>(), // Items will be reconstructed
                     successEvent.TotalAmount,
                     successEvent.PlacedAt
                 );
@@ -106,7 +108,7 @@ public class OrdersController : ControllerBase
                 _logger.LogInformation($"Order {successEvent.OrderNumber.Value} saved to database");
             }
 
-            // Publish event to Service Bus
+            // Publish event to Service Bus - using Events.DeliveryAddressDto
             await _eventSender.SendAsync("order-events", new OrderPlacedDto
             {
                 OrderNumber = successEvent.OrderNumber.Value,
@@ -114,7 +116,7 @@ public class OrdersController : ControllerBase
                 CustomerEmail = successEvent.CustomerEmail,
                 TotalAmount = successEvent.TotalAmount.Value,
                 PlacedAt = successEvent.PlacedAt,
-                DeliveryAddress = new DeliveryAddressDto
+                DeliveryAddress = new Proiect.Domain.Models.Events.DeliveryAddressDto
                 {
                     Street = successEvent.DeliveryStreet,
                     City = successEvent.DeliveryCity,

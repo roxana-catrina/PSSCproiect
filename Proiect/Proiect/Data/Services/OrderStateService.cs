@@ -12,6 +12,7 @@ namespace Proiect.Data.Services
         Task<bool> CheckProductExistsAsync(string productName);
         Task<bool> CheckStockAvailabilityAsync(string productName, int quantity);
         Task UpdateStockAsync(string productName, int quantityToDeduct);
+        Task<OrderDto?> GetOrderByNumberAsync(string orderNumber);
     }
 
     public class OrderStateService : IOrderStateService
@@ -188,5 +189,69 @@ namespace Proiect.Data.Services
             // For now, we'll skip as validated orders usually transition quickly to confirmed
             return Task.CompletedTask;
         }
+
+        public async Task<OrderDto?> GetOrderByNumberAsync(string orderNumber)
+        {
+            var order = await _context.Orders
+                .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
+
+            if (order == null) return null;
+
+            return new OrderDto
+            {
+                OrderNumber = order.OrderNumber,
+                CustomerName = order.CustomerName,
+                CustomerEmail = order.CustomerEmail,
+                DeliveryAddress = new DeliveryAddressDto
+                {
+                    Street = order.DeliveryStreet,
+                    City = order.DeliveryCity,
+                    PostalCode = order.DeliveryPostalCode,
+                    Country = order.DeliveryCountry
+                },
+                Items = order.Items.Select(i => new OrderItemDto
+                {
+                    ProductName = i.Product.Name,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    LineTotal = i.LineTotal
+                }).ToList(),
+                TotalAmount = order.TotalAmount,
+                Status = order.Status,
+                ConfirmedAt = order.ConfirmedAt,
+                PaidAt = order.PaidAt
+            };
+        }
+    }
+
+    public class OrderDto
+    {
+        public string OrderNumber { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
+        public string CustomerEmail { get; set; } = null!;
+        public DeliveryAddressDto DeliveryAddress { get; set; } = null!;
+        public List<OrderItemDto> Items { get; set; } = null!;
+        public decimal TotalAmount { get; set; }
+        public string Status { get; set; } = null!;
+        public DateTime? ConfirmedAt { get; set; }
+        public DateTime? PaidAt { get; set; }
+    }
+
+    public class DeliveryAddressDto
+    {
+        public string Street { get; set; } = null!;
+        public string City { get; set; } = null!;
+        public string PostalCode { get; set; } = null!;
+        public string Country { get; set; } = null!;
+    }
+
+    public class OrderItemDto
+    {
+        public string ProductName { get; set; } = null!;
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal LineTotal { get; set; }
     }
 }
