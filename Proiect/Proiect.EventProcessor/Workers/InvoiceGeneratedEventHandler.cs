@@ -64,7 +64,7 @@ internal class InvoiceGeneratedEventHandler : AbstractEventHandler<InvoiceGenera
             // Execute shipping workflow
             IPackageDeliveredEvent workflowResult = shippingWorkflow.Execute(
                 command,
-                generateAwb: () => $"RO{DateTime.UtcNow:yyMMddHHmmss}", // Format: RO + timestamp
+                generateAwb: () => $"RO{DateTime.UtcNow:yyMMddHHmm}", // Format: RO + 10 digits (yy=2, MM=2, dd=2, HH=2, mm=2)
                 notifyCourier: _ => true, // Simulate courier notification
                 getRecipientName: _ => eventData.CustomerName
             );
