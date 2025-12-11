@@ -1,0 +1,12 @@
+﻿{
+  "profiles": {
+    "Proiect.EventProcessor": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "NETCORE_ENVIRONMENT": "development",
+        "ConnectionStrings:ServiceBus": "YOUR_AZURE_SERVICE_BUS_CONNECTION_STRING_HERE",
+        "ConnectionStrings:DefaultConnection": "Server=localhost;Database=ProiectDb;Trusted_Connection=True;TrustServerCertificate=True;"
+      }
+    }
+  }
+}

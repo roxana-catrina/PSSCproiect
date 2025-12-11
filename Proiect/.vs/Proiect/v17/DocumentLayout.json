@@ -1,0 +1,58 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\roxan\\Desktop\\PSSC\\PSSCproiect\\Proiect\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{7F649E60-D18F-427B-BFB3-6CE805E472A6}|Proiect\\Proiect.csproj|c:\\users\\roxan\\desktop\\pssc\\psscproiect\\proiect\\proiect\\copilot_instructions_full.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{7F649E60-D18F-427B-BFB3-6CE805E472A6}|Proiect\\Proiect.csproj|solutionrelative:proiect\\copilot_instructions_full.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7F649E60-D18F-427B-BFB3-6CE805E472A6}|Proiect\\Proiect.csproj|c:\\users\\roxan\\desktop\\pssc\\psscproiect\\proiect\\proiect\\anexa.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{7F649E60-D18F-427B-BFB3-6CE805E472A6}|Proiect\\Proiect.csproj|solutionrelative:proiect\\anexa.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:134:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "copilot_instructions_full.md",
+              "DocumentMoniker": "C:\\Users\\roxan\\Desktop\\PSSC\\PSSCproiect\\Proiect\\Proiect\\copilot_instructions_full.md",
+              "RelativeDocumentMoniker": "Proiect\\copilot_instructions_full.md",
+              "ToolTip": "C:\\Users\\roxan\\Desktop\\PSSC\\PSSCproiect\\Proiect\\Proiect\\copilot_instructions_full.md",
+              "RelativeToolTip": "Proiect\\copilot_instructions_full.md",
+              "ViewState": "AgIAAE0BAAAAAAAAAAAAABgAAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-04T09:18:21.232Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "anexa.md",
+              "DocumentMoniker": "C:\\Users\\roxan\\Desktop\\PSSC\\PSSCproiect\\Proiect\\Proiect\\anexa.md",
+              "RelativeDocumentMoniker": "Proiect\\anexa.md",
+              "ToolTip": "C:\\Users\\roxan\\Desktop\\PSSC\\PSSCproiect\\Proiect\\Proiect\\anexa.md",
+              "RelativeToolTip": "Proiect\\anexa.md",
+              "ViewState": "AgIAAHQHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2025-12-04T09:18:02.12Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

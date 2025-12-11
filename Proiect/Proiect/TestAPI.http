@@ -1,0 +1,63 @@
+### Test Orders API
+
+### 1. Get all products
+GET https://localhost:5001/api/orders/products
+Accept: application/json
+
+### 2. Place an order
+POST https://localhost:5001/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "John Doe",
+  "customerEmail": "john.doe@example.com",
+  "deliveryAddress": {
+    "street": "Str. Mihai Viteazu 123",
+    "city": "Cluj-Napoca",
+    "postalCode": "400394",
+    "country": "Romania"
+  },
+  "items": [
+    {
+      "productId": "{{productId1}}",
+      "quantity": 1,
+      "unitPrice": 2500
+    },
+    {
+      "productId": "{{productId2}}",
+      "quantity": 2,
+      "unitPrice": 100
+    }
+  ]
+}
+
+### 3. Generate Invoice
+POST https://localhost:5001/api/invoices
+Content-Type: application/json
+
+{
+  "orderId": "{{orderId}}",
+  "totalAmount": 2700,
+  "customerName": "John Doe",
+  "customerEmail": "john.doe@example.com",
+  "paymentMethod": "CreditCard"
+}
+
+### 4. Pickup Package
+POST https://localhost:5001/api/packages/pickup
+Content-Type: application/json
+
+{
+  "orderId": "{{orderId}}",
+  "awb": null,
+  "pickupDate": "2025-11-08T10:00:00",
+  "deliveryAddress": {
+    "street": "Str. Mihai Viteazu 123",
+    "city": "Cluj-Napoca",
+    "postalCode": "400394",
+    "country": "Romania"
+  },
+  "customerEmail": "john.doe@example.com",
+  "simulateDelivery": true
+}
+
