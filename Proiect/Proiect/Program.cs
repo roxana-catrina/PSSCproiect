@@ -51,6 +51,13 @@ public class Program
 
         WebApplication app = builder.Build();
 
+        // Ensure database is created
+        using (var scope = app.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            context.Database.EnsureCreated();
+        }
+
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -59,6 +66,10 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        // Enable static files serving
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
 
         app.UseAuthorization();
 

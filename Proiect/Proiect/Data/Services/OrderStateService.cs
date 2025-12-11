@@ -13,6 +13,8 @@ namespace Proiect.Data.Services
         Task<bool> CheckStockAvailabilityAsync(string productName, int quantity);
         Task UpdateStockAsync(string productName, int quantityToDeduct);
         Task<OrderDto?> GetOrderByNumberAsync(string orderNumber);
+        Task MarkOrderAsPaidAsync(string orderNumber);
+        Task<List<ProductDto>> GetAvailableProductsAsync();
     }
 
     public class OrderStateService : IOrderStateService
@@ -224,6 +226,32 @@ namespace Proiect.Data.Services
                 PaidAt = order.PaidAt
             };
         }
+
+        public async Task MarkOrderAsPaidAsync(string orderNumber)
+        {
+            var order = await _context.Orders
+                .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
+
+            if (order != null)
+            {
+                order.Status = "Paid";
+                order.PaidAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<List<ProductDto>> GetAvailableProductsAsync()
+        {
+            return await _context.Products
+                .Where(p => p.StockQuantity > 0)
+                .Select(p => new ProductDto
+                {
+                    Name = p.Name,
+                    UnitPrice = p.UnitPrice,
+                    StockQuantity = p.StockQuantity
+                })
+                .ToListAsync();
+        }
     }
 
     public class OrderDto
@@ -253,5 +281,12 @@ namespace Proiect.Data.Services
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal LineTotal { get; set; }
+    }
+
+    public class ProductDto
+    {
+        public string Name { get; set; } = null!;
+        public decimal UnitPrice { get; set; }
+        public int StockQuantity { get; set; }
     }
 }

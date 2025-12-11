@@ -28,7 +28,8 @@ public class InvoicesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> GenerateInvoice(
         [FromBody] GenerateInvoiceRequest request,
-        [FromServices] Proiect.Data.Services.IInvoiceStateService invoiceStateService)
+        [FromServices] Proiect.Data.Services.IInvoiceStateService invoiceStateService,
+        [FromServices] Proiect.Data.Services.IOrderStateService orderStateService)
     {
         try
         {
@@ -48,7 +49,7 @@ public class InvoicesController : ControllerBase
             // Handle workflow result and save to database
             IActionResult response = workflowResult switch
             {
-                InvoiceGeneratedSucceededEvent @event => await SaveAndPublishEvent(@event, invoiceStateService),
+                InvoiceGeneratedSucceededEvent @event => await SaveAndPublishEvent(@event, invoiceStateService, orderStateService),
                 InvoiceGeneratedFailedEvent @event => BadRequest(@event.Reasons),
                 _ => throw new NotImplementedException()
             };
@@ -67,7 +68,10 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    private async Task<IActionResult> SaveAndPublishEvent(InvoiceGeneratedSucceededEvent successEvent, Proiect.Data.Services.IInvoiceStateService invoiceStateService)
+    private async Task<IActionResult> SaveAndPublishEvent(
+        InvoiceGeneratedSucceededEvent successEvent, 
+        Proiect.Data.Services.IInvoiceStateService invoiceStateService,
+        Proiect.Data.Services.IOrderStateService orderStateService)
     {
         try
         {
@@ -84,6 +88,10 @@ public class InvoicesController : ControllerBase
 
             await invoiceStateService.SaveInvoiceAsync(generatedInvoice);
             _logger.LogInformation($"Invoice {successEvent.InvoiceNumber} saved to database");
+
+            // Mark order as paid after invoice is generated
+            await orderStateService.MarkOrderAsPaidAsync(successEvent.OrderNumber.Value);
+            _logger.LogInformation($"Order {successEvent.OrderNumber.Value} marked as paid");
 
             // Publish event to Service Bus
             await _eventSender.SendAsync("invoice-events", new InvoiceGeneratedDto
@@ -104,8 +112,12 @@ public class InvoicesController : ControllerBase
                 success = true,
                 invoiceNumber = successEvent.InvoiceNumber,
                 orderNumber = successEvent.OrderNumber.Value,
-                message = "Invoice generated successfully",
-                totalWithVat = successEvent.TotalWithVat.Value
+                customerName = successEvent.CustomerName,
+                totalAmount = successEvent.TotalAmount.Value,
+                vatAmount = successEvent.VatAmount.Value,
+                totalWithVat = successEvent.TotalWithVat.Value,
+                issueDate = successEvent.GeneratedAt,
+                message = "Invoice generated successfully"
             });
         }
         catch (Exception ex)

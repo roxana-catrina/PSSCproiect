@@ -61,7 +61,7 @@ public class OrdersController : ControllerBase
             // Handle workflow result and save to database
             IActionResult response = workflowResult switch
             {
-                OrderPlacedSucceededEvent @event => await SaveAndPublishEvent(@event, orderStateService),
+                OrderPlacedSucceededEvent @event => await SaveAndPublishEvent(@event, orderStateService, request.Items),
                 OrderPlacedFailedEvent @event => BadRequest(@event.Reasons),
                 _ => throw new NotImplementedException()
             };
@@ -80,7 +80,25 @@ public class OrdersController : ControllerBase
         }
     }
 
-    private async Task<IActionResult> SaveAndPublishEvent(OrderPlacedSucceededEvent successEvent, IOrderStateService orderStateService)
+    [HttpGet("products")]
+    public async Task<IActionResult> GetAvailableProducts([FromServices] IOrderStateService orderStateService)
+    {
+        try
+        {
+            var products = await orderStateService.GetAvailableProductsAsync();
+            return Ok(products);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving products");
+            return StatusCode(500, new { error = "Failed to retrieve products" });
+        }
+    }
+
+    private async Task<IActionResult> SaveAndPublishEvent(
+        OrderPlacedSucceededEvent successEvent, 
+        IOrderStateService orderStateService,
+        List<OrderItemRequest> items)
     {
         try
         {
@@ -106,6 +124,14 @@ public class OrdersController : ControllerBase
 
                 await orderStateService.SaveOrderAsync(confirmedOrder);
                 _logger.LogInformation($"Order {successEvent.OrderNumber.Value} saved to database");
+                
+                // Update stock for each product in the order
+                foreach (var item in items)
+                {
+                    int quantity = int.Parse(item.Quantity);
+                    await orderStateService.UpdateStockAsync(item.ProductName, quantity);
+                    _logger.LogInformation($"Stock updated for product {item.ProductName}: deducted {quantity} units");
+                }
             }
 
             // Publish event to Service Bus - using Events.DeliveryAddressDto
@@ -131,8 +157,19 @@ public class OrdersController : ControllerBase
             {
                 success = true,
                 orderNumber = successEvent.OrderNumber.Value,
-                message = "Order placed successfully",
-                totalAmount = successEvent.TotalAmount.Value
+                customerName = successEvent.CustomerName,
+                customerEmail = successEvent.CustomerEmail,
+                deliveryAddress = new
+                {
+                    street = successEvent.DeliveryStreet,
+                    city = successEvent.DeliveryCity,
+                    postalCode = successEvent.DeliveryPostalCode,
+                    country = successEvent.DeliveryCountry
+                },
+                totalAmount = successEvent.TotalAmount.Value,
+                status = "Confirmed",
+                placedAt = successEvent.PlacedAt,
+                message = "Order placed successfully"
             });
         }
         catch (Exception ex)

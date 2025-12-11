@@ -186,3 +186,4 @@ C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect.EventProces
 C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect.EventProcessor\bin\Debug\net9.0\CloudNative.CloudEvents.AspNetCore.dll
 C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect.EventProcessor\bin\Debug\net9.0\CloudNative.CloudEvents.SystemTextJson.dll
 C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect.EventProcessor\bin\Debug\net9.0\appsettings.Local.json
+C:\Users\Ionela\Desktop\Semestrul 1\PSSC\PSSCproiect\Proiect\Proiect.EventProcessor\bin\Debug\net9.0\Proiect.staticwebassets.runtime.json

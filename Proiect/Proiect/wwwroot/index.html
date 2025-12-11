@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Processing System - PSSC Project</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Order Processing System</h1>
+            <p>Select products and track real-time order processing</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Order Form -->
+            <div class="form-section">
+                <h2>Place New Order</h2>
+                <form id="orderForm">
+                    <div class="form-group">
+                        <label for="customerName">Customer Name *</label>
+                        <input type="text" id="customerName" name="customerName" required 
+                               placeholder="John Doe" value="John Doe">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customerEmail">Email *</label>
+                        <input type="email" id="customerEmail" name="customerEmail" required 
+                               placeholder="john.doe@email.com" value="john.doe@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="deliveryStreet">Street *</label>
+                        <input type="text" id="deliveryStreet" name="deliveryStreet" required 
+                               placeholder="123 Main Street" value="123 Main Street">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="deliveryCity">City *</label>
+                            <input type="text" id="deliveryCity" name="deliveryCity" required 
+                                   placeholder="New York" value="New York">
+                        </div>
+                        <div class="form-group">
+                            <label for="deliveryPostalCode">Postal Code *</label>
+                            <input type="text" id="deliveryPostalCode" name="deliveryPostalCode" required 
+                                   placeholder="10001" value="10001">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="deliveryCountry">Country *</label>
+                        <input type="text" id="deliveryCountry" name="deliveryCountry" required 
+                               placeholder="USA" value="USA">
+                    </div>
+
+                    <h3>Products</h3>
+                    <div id="productsLoadingMessage" class="loading-message">
+                        <div class="spinner-large"></div>
+                        <p>Loading available products...</p>
+                    </div>
+                    <div id="productsContainer" style="display: none;">
+                        <!-- Products will be loaded here dynamically -->
+                    </div>
+                    
+                    <div class="total-section">
+                        <h3>Order Total: <span id="orderTotal">$0.00</span></h3>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" id="submitBtn">
+                            Process Order
+                        </button>
+                        <button type="button" class="btn-secondary" onclick="clearLogs()">
+                            Clear Logs
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section">
+                <h2>Processing Status</h2>
+                
+                <!-- Real-time logs -->
+                <div class="logs-container">
+                    <h3>Processing Logs</h3>
+                    <div id="logsContent" class="logs-content">
+                        <p class="log-empty">Waiting for order processing...</p>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div class="results-container">
+                    <div class="result-card" id="orderResult" style="display: none;">
+                        <h3>Order Placed</h3>
+                        <div id="orderDetails"></div>
+                    </div>
+
+                    <div class="result-card" id="invoiceResult" style="display: none;">
+                        <h3>Invoice Generated</h3>
+                        <div id="invoiceDetails"></div>
+                    </div>
+
+                    <div class="result-card" id="packageResult" style="display: none;">
+                        <h3>Package Shipped</h3>
+                        <div id="packageDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

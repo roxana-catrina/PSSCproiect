@@ -107,10 +107,18 @@ public class PackagesController : ControllerBase
             return Ok(new
             {
                 success = true,
-                trackingNumber = successEvent.TrackingNumber.Value,
-                message = "Package shipped successfully",
-                courierMessage = "The recipient will be contacted by the delivery man",
-                shippedAt = successEvent.ShippedAt
+                awb = successEvent.TrackingNumber.Value,
+                orderNumber = successEvent.OrderNumber.Value,
+                deliveryAddress = new
+                {
+                    street = successEvent.DeliveryAddress.Street,
+                    city = successEvent.DeliveryAddress.City,
+                    postalCode = successEvent.DeliveryAddress.PostalCode,
+                    country = successEvent.DeliveryAddress.Country
+                },
+                courierNotificationStatus = "Notified",
+                pickupDate = successEvent.ShippedAt,
+                message = "Package shipped successfully"
             });
         }
         catch (Exception ex)
